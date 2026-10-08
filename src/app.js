@@ -10,7 +10,7 @@
   const esc=x=>String(x??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
   const average=r=>Math.round((r.stats.speed+r.stats.stamina+r.stats.hill+r.stats.grit)/4);
   const seed=()=>{const n=new Uint32Array(1);if(globalThis.crypto?.getRandomValues){globalThis.crypto.getRandomValues(n);return n[0]||1;}return (Date.now()>>>0)||1;};
-  let state=load(), flash="";
+  let state=load(), flash="",marketTeam="北稜大学",marketRank=1,marketStake=50000;
   function load(){try{const raw=localStorage.getItem(KEY);if(raw){const s=E.migrateSave(JSON.parse(raw));return s;}}catch(e){console.warn("セーブデータの読み込みに失敗:",e.message)}return E.newGame(seed())}
   function persist(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){flash="自動保存できませんでした。下の「セーブ書き出し」を使用してください。";}}
   function panel(title,sub,body){return '<section class="panel"><header class="panelhead"><h2>'+title+'</h2><span class="tiny muted">'+sub+'</span></header><div class="panelbody">'+body+'</div></section>'}
@@ -91,6 +91,28 @@
     const f=E.financials(state),entries=[...f.entries].reverse();
     return panel("年度決算・資金繰り",state.year+"年度 / 現金主義",'<div class="account"><div><label>収入</label><strong class="green">'+yen(f.income)+'</strong></div><div><label>支出</label><strong class="red">'+yen(f.expenses)+'</strong></div><div><label>収支</label><strong>'+yen(f.net)+'</strong></div></div><div class="line tiny"><span class="muted">期首残高</span><strong>'+yen(f.opening)+'</strong></div><div class="line tiny"><span class="muted">期末予測残高（現在）</span><strong>'+yen(f.ending)+'</strong></div><details class="collapse"><summary class="tiny">収支明細を開く（'+entries.length+'件）</summary><div class="ledger"><table><thead><tr><th>週</th><th>費目</th><th>内容</th><th class="num">収支</th></tr></thead><tbody>'+entries.map(x=>'<tr><td>'+x.week+'</td><td>'+esc(x.kind)+'</td><td>'+esc(x.label)+'</td><td class="num '+(x.amount>=0?"green":"red")+'">'+(x.amount>=0?"+":"")+yen(x.amount)+'</td></tr>').join("")+'</tbody></table></div></details><p class="muted mini">大学配分・卒業生支援は架空のモデル額です。寄付は賞金ではなく活動支援として計上。赤字取引は禁止し、残高は年度をまたいで繰り越します。</p>')
   }
+
+  function predictionMarket(){
+    const P=globalThis.EkidenPrediction;
+    if(!P)return "";
+    if(state.prediction){
+      const b=state.prediction,level=b.status==="placed"?"投票受付終了":b.status==="won"?"的中！":"不的中";
+      const outcome=b.status==="placed"?"大会終了後に順位が確定します":'実際の順位 '+b.actualRank+'位 / 払戻し '+yen(b.payout||0);
+      return panel("レース順位予想・投票券",level,'<div class="ticket"><div class="eyebrow">VIRTUAL PREDICTION</div><div class="ticket-title">'+esc(b.team)+'　'+b.rank+'位</div><div class="line"><span>確定オッズ <strong>×'+b.odds.toFixed(1)+'</strong></span><span>部費支出 '+yen(b.stake)+'</span></div><div class="line"><span>想定的中確率 '+b.probability+'%</span><span class="'+(b.status==="won"?"green":"accent")+'">'+level+'</span></div><p class="tiny">'+outcome+'</p></div><div class="mini muted">現実のお金・換金・景品・オンライン賭博は一切ありません。ゲーム内予測イベントです。</div>');
+    }
+    if(state.week!==12||state.race||state.ending)return panel("順位予想ボード","育成12週が終了すると解禁","<p class='tiny muted'>大会前に、選手の能力から推定した倍率を見て、部費で順位を予想できます。ゲーム内専用・換金不可。</p>");
+    const qs=P.quotes(state);
+    if(!qs.some(q=>q.name===marketTeam))marketTeam=qs[0].name;
+    const chosen=qs.find(q=>q.name===marketTeam), quote=chosen.ranks[marketRank-1];
+    const row=qs.map((q,i)=>'<tr class="'+(q.name===marketTeam?"human":"")+'"><td class="num">'+(i+1)+'</td><td>'+esc(q.name)+'</td><td class="num">'+q.strength+'</td><td class="num">'+q.ranks[marketRank-1].probability+'%</td><td class="num strong">'+q.ranks[marketRank-1].odds.toFixed(1)+'倍</td></tr>').join("");
+    const options=qs.map(q=>'<option value="'+esc(q.name)+'" '+(marketTeam===q.name?"selected":"")+'>'+esc(q.name)+'</option>').join("");
+    return panel("レース順位予想・オッズ","部費で挑戦 / 1年につき1口",
+      '<div class="odds-board"><div class="eyebrow">PREDICTION BOARD — '+state.year+'年目</div><div class="tiny muted">予想順位：'+marketRank+'位 / オッズは選手能力と乱数試算を用いた参考値</div><div class="tablewrap"><table><thead><tr><th class="num">枠</th><th>大学</th><th class="num">戦力</th><th class="num">推定確率</th><th class="num">倍率</th></tr></thead><tbody>'+row+'</tbody></table></div></div>'+
+      '<div class="controlrow"><div class="field"><label for="market-team">予想する大学</label><select id="market-team">'+options+'</select></div><div class="field"><label for="market-rank">順位</label><select id="market-rank">'+Array.from({length:8},(_,i)=>'<option value="'+(i+1)+'" '+(marketRank===i+1?"selected":"")+'>'+(i+1)+'位</option>').join("")+'</select></div><div class="field"><label for="market-stake">部費を使う額</label><select id="market-stake">'+[20000,50000,100000,200000,400000].map(v=>'<option value="'+v+'" '+(marketStake===v?"selected":"")+'>'+yen(v)+'</option>').join("")+'</select></div></div>'+
+      '<div class="ticket-preview"><div><div class="tiny muted">選択オッズ</div><strong>×'+quote.odds.toFixed(1)+'</strong></div><div><div class="tiny muted">的中時の合計払戻し</div><strong>'+yen(Math.floor(marketStake*quote.odds))+'</strong></div><div><div class="tiny muted">はずれた場合</div><strong class="red">−'+yen(marketStake)+'</strong></div></div>'+
+      '<button class="btn" data-action="prediction" '+(state.cash-marketStake<480000?"disabled":"")+'>この予想を確定する</button><p class="tiny muted">部費残高から購入額を差し引きます。確定後の変更・払戻しは不可。遠征費48万円は必ず確保します。予想は任意で、購入せず大会に進めます。</p>');
+  }
+
   function history(){
     if(!state.history.length)return panel("歴代成績","周回するほど強くなる","<p class='muted tiny'>シーズン終了後、最終順位と年度決算がここに残ります。4年生は卒業し、新入部員が加入します。</p>");
     const rows=[...state.history].reverse().map(h=>'<tr><td>'+h.year+'年目</td><td class="num '+(h.rank===1?"green":"")+'">'+h.rank+'位</td><td>'+esc(h.winner)+'</td><td class="num">'+yen(h.finance.income)+'</td><td class="num">'+yen(h.finance.expenses)+'</td><td class="num">'+yen(h.finance.net)+'</td><td class="num">'+yen(h.finance.ending)+'</td></tr>').join("");
@@ -130,7 +152,7 @@
     const root=document.getElementById("app");
     root.innerHTML='<div class="wrap"><header class="top"><div><div class="eyebrow">University long-distance strategy</div><h1 class="brand">EKIDEN <span class="accent">MANAGER</span></h1><div class="sub">栄光への襷 — 育成 × レース戦術 × 部費経営</div></div><span class="tag">OFFLINE ALPHA v0.3</span></header>'+
       statsCards()+'<div class="notice">'+esc(flash||state.lastLog)+'</div><div class="layout"><div>'+
-      racing()+training()+lineup()+runners()+'</div><aside>'+tutorial()+finance()+store()+rivalDashboard()+history()+'</aside></div>'+
+      racing()+training()+lineup()+runners()+'</div><aside>'+tutorial()+predictionMarket()+finance()+store()+rivalDashboard()+history()+'</aside></div>'+
       '<footer class="footer"><div>ゲームの選手・大学・財務は架空設定です。結果は乱数シードで再現可能です。</div><div class="flex"><button class="btn small ghost" data-action="export">セーブ書き出し</button><button class="btn small ghost" data-action="import">セーブ読込</button><button class="btn small danger" data-action="reset">最初から</button><input type="file" id="savefile" accept=".json,application/json" hidden/></div></footer></div>';
   }
   function execute(fn){flash="";try{fn();E.validate(state);persist();}catch(e){flash="操作できませんでした："+e.message;}render();}
@@ -145,6 +167,7 @@
       if(action==="train")E.train(state,document.getElementById("focus").value,document.getElementById("intensity").value);
       else if(action==="buy")E.buyItem(state,button.dataset.key);
       else if(action==="scout")E.investScouting(state);
+      else if(action==="prediction")globalThis.EkidenPrediction.place(state,marketTeam,marketRank,marketStake);
       else if(action==="lineup")E.setLineup(state,E.LEGS.map((_,i)=>Number(document.getElementById("leg-"+i).value)));
       else if(action==="start")E.startRace(state);
       else if(action==="next")E.stepRace(state,document.getElementById("strategy").value);
@@ -153,6 +176,9 @@
     });
   });
   document.addEventListener("change",event=>{
+    if(event.target.id==="market-team"){marketTeam=event.target.value;render();return;}
+    if(event.target.id==="market-rank"){marketRank=Number(event.target.value);render();return;}
+    if(event.target.id==="market-stake"){marketStake=Number(event.target.value);render();return;}
     if(event.target.id!=="savefile")return;
     const file=event.target.files[0];if(!file)return;
     file.text().then(text=>{if(text.length>8*1024*1024)throw Error("セーブファイルが大きすぎます");const imported=E.migrateSave(JSON.parse(text));state=imported;flash="セーブデータを読み込みました。";persist();render();}).catch(e=>{flash="読込失敗："+e.message;render()});
