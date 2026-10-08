@@ -29,6 +29,12 @@
     const selects=E.SKILLS.map(s=>'<option value="'+s+'">'+skillLabels[s]+'</option>').join("");
     return panel("週間トレーニング","年間12週を圧縮したシーズン","<p class='muted tiny'>選んだ能力を10名全員が鍛えます。出走予定の5名は合宿・測定の特別効果を受けます。疲労が高いと練習効率が低下します。</p><div class='controlrow'><div class='field'><label for='focus'>育成項目</label><select id='focus'>"+selects+"</select></div><div class='field'><label for='intensity'>練習強度</label><select id='intensity'><option value='light'>調整練習（¥38,000）</option><option value='normal' selected>通常練習（¥72,000）</option><option value='hard'>高強度（¥110,000）</option></select></div><button class='btn' data-action='train' "+(disabled?"disabled":"")+">次の週へ進む →</button></div><div class='divider'></div><div class='flex'><span class='pill'>"+state.week+" / 12週</span><span class='muted tiny'>3D表示・通信なし / セーブ対応</span></div>")
   }
+  function schoolEvents(){
+    const all=(state.events||[]).filter(e=>e.year===state.year).slice(-7).reverse();
+    return panel("大学生活・突発イベント","好調も不調も育成と予算に反映",
+      all.length?'<div class="event-feed">'+all.map(e=>'<div class="event-item"><div class="tiny muted">第'+e.week+'週 · EVENT</div><strong>'+esc(e.headline)+'</strong><p class="tiny">'+esc(e.detail)+'</p></div>').join('')+'</div>':'<p class="tiny muted">週次の練習を進めると、恋愛、故障、合同練習、栄養管理、地域の支援などが発生することがあります。</p>');
+  }
+
   function runners(){
     const d=state.roster.map(r=>'<tr><td><strong>'+esc(r.name)+'</strong>'+(r.talent?'<span class="talent-chip">★ '+esc(r.talent)+'</span>':'')+'<div class="mini muted">'+r.grade+'年生'+(r.grade===4?'・最終学年':'')+'</div><div class="mini green">PB: '+(Object.entries(r.records||{}).sort((a,b)=>Number(a[0])-Number(b[0])).map(([km,seconds])=>km+'km '+time(seconds)).join(' / ')||'未記録')+'</div></td>'+E.SKILLS.map(k=>'<td class="num">'+dec(r.stats[k])+'</td>').join("")+'<td><div class="bar"><div class="fill '+(r.fatigue>=55?'warn':'')+'" style="width:'+Math.round(r.fatigue)+'%"></div></div><span class="mini muted">'+Math.round(r.fatigue)+'/100</span></td><td class="num">'+Math.round(r.morale)+'</td></tr>').join("");
     return panel("選手名鑑","卒業・新入部員あり",'<div class="tablewrap"><table><thead><tr><th>選手</th>'+E.SKILLS.map(k=>'<th class="num">'+skillLabels[k]+'</th>').join("")+'<th>疲労</th><th class="num">士気</th></tr></thead><tbody>'+d+'</tbody></table></div><p class="muted tiny">能力が高くても、当日の調子や終盤の粘り次第で結果は変わります。</p>')
@@ -95,7 +101,7 @@
     const choice=r.finished?('<div class="finish-banner '+(state.ending==="lost"?"defeat":r.rank===1?"victory":"")+'"><div class="eyebrow">'+(state.ending==="lost"?"GAME OVER":r.rank===1?"CHAMPION":"RACE FINISHED")+'</div><strong>'+r.rank+'位でゴール！</strong><div class="tiny">'+(state.ending==="won"?"8年間の挑戦達成！":state.ending==="lost"?"8年間で全国優勝できず、監督生活は終了です。":r.rank===1?"全国優勝達成！続きの年度もプレイできます。":"年間記録を見て、来季の強化につなげましょう。")+'</div></div>'+
       (state.prediction?'<div class="notice">順位予想：'+(state.prediction.status==="won"?"的中！ "+yen(state.prediction.payout)+"を部費に加算しました。":"不的中。購入額は部費の支出になりました。")+'</div>':'')+
       (state.ending?'<button class="btn secondary" data-action="reset">新しい監督生活を始める</button>':'<button class="btn" data-action="close">年度決算を確定して次年度へ →</button>')):
-      '<div class="controlrow"><div class="field"><label for="strategy">次チェックポイントの指示</label><select id="strategy"><option value="save">体力温存</option><option value="steady" selected>標準ペース</option><option value="push">積極策・攻め</option></select></div><button class="btn" data-action="next">次の地点へ →</button><button class="btn secondary" data-action="skip">区間終了まで進む</button></div><p class="muted tiny">全15地点で指示できます。攻めすぎると体力が尽きて大幅に失速します。</p>';
+      '<div class="hydration-panel"><div class="eyebrow">RACE PIT STRATEGY — 給水ステーション</div><div class="line tiny"><span>大会中の給水費用</span><strong>'+yen(r.waterSpent||0)+'</strong></div><div class="line tiny"><span>給水に使える部費</span><strong>'+yen(state.cash)+'</strong></div><div class="controlrow"><div class="field"><label for="strategy">走行ペース</label><select id="strategy"><option value="save">体力温存</option><option value="steady" selected>標準ペース</option><option value="push">積極策・攻め</option></select></div><div class="field"><label for="water">渡す水の数（1杯＝'+yen(E.WATER_COST)+'）</label><select id="water"><option value="0">0杯・無料（水分不足リスク）</option><option value="1" selected>1杯・'+yen(E.WATER_COST)+'</option><option value="2">2杯・'+yen(E.WATER_COST*2)+'</option><option value="3">3杯・'+yen(E.WATER_COST*3)+'</option></select></div></div><div class="flex"><button class="btn" data-action="next">給水と走行を確定 →</button><button class="btn secondary" data-action="skip">この区間をまとめて進む</button></div><p class="muted tiny">1杯が基本。給水不足は脱水による失速、連続した大量給水は腹部の重さによる失速につながります。余った部費を勝負どころに使えます。まとめて進む場合も選択した給水量を各地点で適用します。</p></div>';
         return panel("全国大学駅伝","レース進行中",info+standing()+'<div class="divider"></div>'+choice)
   }
   function finance(){
@@ -163,7 +169,7 @@
     const root=document.getElementById("app");
     root.innerHTML='<div class="wrap"><header class="top"><div><div class="eyebrow">University long-distance strategy</div><h1 class="brand">EKIDEN <span class="accent">MANAGER</span></h1><div class="sub">栄光への襷 — 育成 × レース戦術 × 部費経営</div></div><span class="tag">OFFLINE ALPHA v0.4.1</span></header>'+
       statsCards()+'<div class="notice">'+esc(flash||state.lastLog)+'</div><div class="layout"><div>'+
-      (state.week>=12&&!state.race&&!state.ending?predictionMarket():'')+racing()+training()+lineup()+runners()+'</div><aside>'+tutorial()+(state.week>=12&&!state.race&&!state.ending?'':predictionMarket())+finance()+store()+rivalDashboard()+history()+'</aside></div>'+
+      (state.week>=12&&!state.race&&!state.ending?predictionMarket():'')+racing()+training()+schoolEvents()+lineup()+runners()+'</div><aside>'+tutorial()+(state.week>=12&&!state.race&&!state.ending?'':predictionMarket())+finance()+store()+rivalDashboard()+history()+'</aside></div>'+
       '<footer class="footer"><div>ゲームの選手・大学・財務は架空設定です。結果は乱数シードで再現可能です。</div><div class="flex"><button class="btn small ghost" data-action="export">セーブ書き出し</button><button class="btn small ghost" data-action="import">セーブ読込</button><button class="btn small danger" data-action="reset">最初から</button><input type="file" id="savefile" accept=".json,application/json" hidden/></div></footer></div>';
   }
   function execute(fn){flash="";const checkpoint=JSON.stringify(state);try{fn();E.validate(state);persist();}catch(e){state=JSON.parse(checkpoint);flash="操作できませんでした："+e.message;}render();}
@@ -181,8 +187,8 @@
       else if(action==="prediction")globalThis.EkidenPrediction.place(state,marketTeam,marketRank,marketStake);
       else if(action==="lineup")E.setLineup(state,E.LEGS.map((_,i)=>Number(document.getElementById("leg-"+i).value)));
       else if(action==="start")E.startRace(state);
-      else if(action==="next")E.stepRace(state,document.getElementById("strategy").value);
-      else if(action==="skip")E.nextLeg(state,document.getElementById("strategy").value);
+      else if(action==="next")E.stepRace(state,document.getElementById("strategy").value,Number(document.getElementById("water").value));
+      else if(action==="skip")E.nextLeg(state,document.getElementById("strategy").value,Number(document.getElementById("water").value));
       else if(action==="close")E.closeYear(state);
     });
   });
