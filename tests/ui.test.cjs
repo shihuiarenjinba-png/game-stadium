@@ -44,6 +44,7 @@ test("training, scouting, checkpoint map, year-end accounting, and autosave run 
   assert.match(app.markup,/value="30000"/);
   assert.match(app.markup,/value="390000"/);
   assert.match(app.markup,/晴384・雨128/);
+  assert.ok(app.markup.indexOf('id="market-team"')<app.markup.indexOf('class="odds-board"'),"bet controls must appear before comparison table");
   app.click("prediction");
   assert.equal(app.state.prediction.status,"placed");
   assert.equal(app.state.prediction.stake,50000);
