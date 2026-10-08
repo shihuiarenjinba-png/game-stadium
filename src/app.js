@@ -38,8 +38,9 @@
   }
   function store(){
     const shop=Object.entries(E.SHOP).map(([key,item])=>'<div class="shopcard"><div><strong>'+esc(item.name)+'</strong><p>'+esc(item.desc)+'</p>'+(state.items[key]?'<span class="pill">保有 '+state.items[key]+'個</span>':'')+'</div><button class="btn small secondary" data-action="buy" data-key="'+key+'" '+((state.race||state.week>=12||state.cash<item.cost)?"disabled":"")+'>'+yen(item.cost)+'</button></div>').join("");
+    const recruitment='<div class="shopcard"><div><strong>来年度のスカウト活動</strong><p>高校生の視察・勧誘。翌年度の新入生の能力が上昇します（年最大3回）。費用は部費から支出。</p><span class="pill">今年度 '+(state.scouting||0)+'/3回</span></div><button class="btn small secondary" data-action="scout" '+((state.race||state.week>=12||(state.scouting||0)>=3||state.cash-180000<480000+(12-state.week)*38000)?"disabled":"")+'>¥180,000</button></div>';
     const invite=state.offer?'<div class="shopcard" style="border-color:#dbb777;background:#2e3230"><div><strong class="accent">★ 抽選で合同合宿に招待！</strong><p>部費¥260,000で次回の選抜5名の成長が2倍。残り期限：第'+state.offer.expires+'週まで。</p></div><button class="btn small" data-action="buy" data-key="invite" '+(state.race||state.week>=12||state.cash-260000<480000+(12-state.week)*38000?"disabled":"")+'>招待を使う</button></div>':'';
-    return panel("部費で購入する支援・備品","魔法アイテムなし",'<p class="tiny muted">支援効果はゲーム用に誇張していますが、合宿・測定・補給・装備など実在する活動に費用を割り当てています。購入費は全額その年度に記帳します。</p>'+invite+shop)
+    return panel("部費で購入する支援・備品","魔法アイテムなし",'<p class="tiny muted">支援効果はゲーム用に誇張していますが、合宿・測定・補給・装備など実在する活動に費用を割り当てています。購入費は全額その年度に記帳します。</p>'+recruitment+invite+shop)
   }
   // No 3D characters: a schematic 2D route with distance-scaled checkpoint markers.
   function courseMap(){
@@ -101,6 +102,7 @@
     execute(()=>{
       if(action==="train")E.train(state,document.getElementById("focus").value,document.getElementById("intensity").value);
       else if(action==="buy")E.buyItem(state,button.dataset.key);
+      else if(action==="scout")E.investScouting(state);
       else if(action==="lineup")E.setLineup(state,E.LEGS.map((_,i)=>Number(document.getElementById("leg-"+i).value)));
       else if(action==="start")E.startRace(state);
       else if(action==="next")E.stepRace(state,document.getElementById("strategy").value);
