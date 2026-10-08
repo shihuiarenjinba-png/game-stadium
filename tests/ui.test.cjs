@@ -31,6 +31,8 @@ test("training, scouting, checkpoint map, year-end accounting, and autosave run 
   const app=createUiHarness();
   assert.match(app.markup,/EKIDEN/);
   assert.match(app.markup,/年度決算/);
+  assert.match(app.markup,/監督手帳/);
+  assert.match(app.markup,/ライバル大学の偵察/);
   app.click("scout");
   assert.equal(app.state.scouting,1);
   assert.equal(app.state.cash,2220000);
@@ -51,6 +53,8 @@ test("training, scouting, checkpoint map, year-end accounting, and autosave run 
   assert.equal(app.state.year,2);
   assert.match(app.markup,/歴代成績・年度決算/);
   assert.match(app.markup,/決算明細/);
+  assert.match(app.markup,/卒業生の記録/);
+  assert.match(app.markup,/最終順位/);
   assert.equal(app.state.history[0].finance.ending,ending);
   assert.equal(app.engine.financials(app.state).ending,app.state.cash);
 });
