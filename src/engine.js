@@ -42,7 +42,13 @@ function validate(s){
   if("alumni" in s && (!Array.isArray(s.alumni)||s.alumni.length>10000))throw Error("卒業生データが不正です");
   if("scouting" in s && (!Number.isInteger(s.scouting)||s.scouting<0||s.scouting>3))throw Error("スカウト投資が不正です");
   if(!s.items||!["camp","science","recovery","rain"].every(k=>Number.isInteger(s.items[k])&&s.items[k]>=0&&s.items[k]<=100))throw Error("備品の保有データが不正です");
-  if(s.rivalTeams!==undefined&&(!Array.isArray(s.rivalTeams)||s.rivalTeams.length!==7||s.rivalTeams.some(t=>!t||!Array.isArray(t.roster)||t.roster.length!==10||!Number.isSafeInteger(t.cash)||t.cash<0||!Array.isArray(t.lineup)||t.lineup.length!==5||new Set(t.lineup).size!==5||t.lineup.some(id=>!t.roster.some(r=>r.id===id)))))throw Error("CPU大学の保存データが不正です");
+  if(s.rivalTeams!==undefined&&(!Array.isArray(s.rivalTeams)||s.rivalTeams.length!==7||s.rivalTeams.some(t=>
+    !t||!Array.isArray(t.roster)||t.roster.length!==10||!Number.isSafeInteger(t.cash)||t.cash<0||
+    !t.finance||!Number.isSafeInteger(t.finance.income)||!Number.isSafeInteger(t.finance.expenses)||
+    (Number.isSafeInteger(t.finance.opening)&&t.finance.opening+t.finance.income-t.finance.expenses!==t.cash)||
+    t.roster.some(r=>!r||!Number.isInteger(r.id)||!r.name||!Number.isInteger(r.grade)||r.grade<1||r.grade>4||!r.stats||SKILLS.some(k=>!Number.isFinite(r.stats[k])||r.stats[k]<0||r.stats[k]>100))||
+    !Array.isArray(t.lineup)||t.lineup.length!==5||new Set(t.lineup).size!==5||t.lineup.some(id=>!t.roster.some(r=>r.id===id))
+  )))throw Error("CPU大学の保存データが不正です");
   if(s.race && (!Array.isArray(s.race.contestants)||s.race.contestants.length!==8||!Number.isInteger(s.race.leg)||s.race.leg<0||s.race.leg>5||s.race.finished!==true&&s.race.leg===5))throw Error("大会データが不正です");
   return true;
 }
@@ -51,6 +57,7 @@ function migrateSave(s){
   if(!Number.isInteger(s.scouting))s.scouting=0;
   if(!Array.isArray(s.alumni))s.alumni=[];
   ensureRivalTeams(s);
+  for(const team of s.rivalTeams)if(!Number.isSafeInteger(team.finance.opening))team.finance.opening=team.cash-team.finance.income+team.finance.expenses;
   if(s.race){
     if(!Number.isInteger(s.race.segment))s.race.segment=0;
     if(!s.race.finished)for(const c of s.race.contestants)if(!c.human&&!Array.isArray(c.runners)){
@@ -112,7 +119,7 @@ function selectRivalLineup(team){
   return chosen;
 }
 function newRivalTeam(s,template,index){
-  const team={index,name:template.name,base:template.base,boss:!!template.boss,style:index===0?"endurance":(["speed","hill","endurance","balanced"][index%4]),cash:2400000,finance:{income:4600000,expenses:2200000},roster:[],lineup:[],nextId:11,lastRank:null};
+  const team={index,name:template.name,base:template.base,boss:!!template.boss,style:index===0?"endurance":(["speed","hill","endurance","balanced"][index%4]),cash:2400000,finance:{opening:0,income:4600000,expenses:2200000},roster:[],lineup:[],nextId:11,lastRank:null};
   for(let i=1;i<=10;i++)team.roster.push(makeRivalAthlete(s,team,i<=2?4:i<=5?3:i<=8?2:1,i));
   team.lineup=selectRivalLineup(team);
   return team;
@@ -151,8 +158,8 @@ function nextRivalYear(s,ranks){
     for(let i=0;i<graduates;i++)team.roster.push(makeRivalAthlete(s,team,1,team.nextId++));
     team.lineup=selectRivalLineup(team);
     const income=4400000+Math.round(between(s,0,400000))+(team.boss?250000:0);
-    const fixed=2200000;team.cash+=income-fixed;
-    team.finance={income,expenses:fixed};
+    const fixed=2200000,opening=team.cash;team.cash+=income-fixed;
+    team.finance={opening,income,expenses:fixed};
   }
 }
 
