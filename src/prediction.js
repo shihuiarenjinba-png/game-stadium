@@ -6,7 +6,7 @@
   const ROUNDS=160;
   function quotes(s){
     const home=s.lineup.map(id=>s.roster.find(r=>r.id===id));
-    const teams=[{name:"あなたの大学",runners:home},...s.rivalTeams.map(t=>({name:t.name,runners:t.lineup.map(id=>t.roster.find(r=>r.id===id))}))];
+    const teams=[{name:"あなたの大学",runners:home},...s.rivalTeams.map(t=>({name:t.name,runners:G.selectRivalLineup(t).map(id=>t.roster.find(r=>r.id===id))}))];
     if(teams.some(t=>t.runners.some(r=>!r)))throw Error("出走選手不足");
     let seed=(s.year*7919+teams.reduce((a,t)=>a+t.runners.reduce((sum,r)=>sum+Math.round((r.stats.speed+r.stats.stamina+r.stats.hill)*10),0),0))>>>0;
     function random(){seed=(Math.imul(1664525,seed)+1013904223)>>>0;return seed/4294967296;}
