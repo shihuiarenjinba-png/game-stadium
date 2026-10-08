@@ -303,6 +303,8 @@ function stepRace(s,stance="steady",water=0){
 }
 function nextLeg(s,stance="steady",water=0){
   if(!s.race||s.race.finished)throw Error("進行中の大会がありません");
+  if(!Number.isInteger(water)||water<0||water>3)throw Error("給水は0〜3杯を指定してください");
+  if(s.cash<(3-(s.race.segment||0))*water*WATER_COST)throw Error("区間をまとめるための給水費用が不足しています。給水量を下げてください");
   const finishLeg=s.race.leg;
   while(!s.race.finished && s.race.leg===finishLeg)stepRace(s,stance,water);
   return s;
