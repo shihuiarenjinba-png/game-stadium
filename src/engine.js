@@ -2,7 +2,7 @@
 const MAX_SEASONS=8;
 const SKILLS=["speed","stamina","hill","grit","recovery"];
 const LEGS=[{"km":8,"title":"1区・平坦"},{"km":10,"title":"2区・登坂"},{"km":12,"title":"3区・持久戦"},{"km":8,"title":"4区・下り"},{"km":12,"title":"5区・最終勝負"}];
-const SHOP={"camp":{"name":"強化合宿","cost":420000,"desc":"次の1回、出走予定5人の対象能力成長を2倍。疲労増加あり"},"science":{"name":"フォーム・乳酸測定","cost":160000,"desc":"次の1回、出走予定5人の対象能力成長を1.35倍"},"recovery":{"name":"栄養・リカバリー支援","cost":150000,"desc":"全部員の疲労を軽減し、士気を改善"},"rain":{"name":"雨天用シューズ・備品","cost":240000,"desc":"次大会1回、雨天時のペース低下を緩和"}};
+const SHOP={"elite":{"name":"全国強化プログラム","cost":780000,"desc":"次の3回の練習で選抜5名の成長×1.6。疲労が増える最上位支援。"},"camp":{"name":"強化合宿","cost":420000,"desc":"次の1回、出走予定5人の対象能力成長を2倍。疲労増加あり"},"science":{"name":"フォーム・乳酸測定","cost":160000,"desc":"次の1回、出走予定5人の対象能力成長を1.35倍"},"recovery":{"name":"栄養・リカバリー支援","cost":150000,"desc":"全部員の疲労を軽減し、士気を改善"},"rain":{"name":"雨天用シューズ・備品","cost":240000,"desc":"次大会1回、雨天時のペース低下を緩和"}};
 const RIVALS=[{"name":"北稜大学","base":86.5,"boss":true},{"name":"東央大学","base":80.5},{"name":"西峰大学","base":77.8},{"name":"海風大学","base":74.4},{"name":"栄進大学","base":71.8},{"name":"緑ヶ丘大学","base":68.8},{"name":"南都大学","base":66}];
 const NAMES=["佐藤 智也","田中 陸","山本 駿","伊藤 悠","鈴木 健人","高橋 湊","小林 蒼","渡辺 悠人","中村 大地","加藤 陽太","森 蓮","山口 碧","井上 歩","石川 颯","松本 悠真","清水 仁","前田 航"];
 
@@ -18,7 +18,7 @@ function addMoney(s,amount,kind,label){if(amount<0 && s.cash+amount<0)throw Erro
 
 function makeRunner(s,name,grade,id){let level=54+grade*4+(grade===1?Math.min(14,(s.year-1)*3.3):0)+between(s,-5,9);let x={id,name,grade,fatigue:between(s,6,18),morale:between(s,60,86),traits:{clutch:between(s,0,1),hill:between(s,-5,5)},stats:{}};for(const k of SKILLS)x.stats[k]=Math.round(clamp(level+between(s,-7,7),35,90)*10)/10;return x}
 
-function newGame(seed=20261008){let s={version:1,year:1,week:0,rng:(seed>>>0)||1,cash:0,roster:[],lineup:[],ledger:[],history:[],alumni:[],items:{camp:0,science:0,recovery:0,rain:0},scouting:0,offer:null,prediction:null,ending:null,race:null,lastLog:"創部1年目。全国駅伝の絶対王者・北稜大学に挑戦します。",awards:0};for(let i=0;i<10;i++){let grade=i<2?4:i<5?3:i<8?2:1;s.roster.push(makeRunner(s,NAMES[i],grade,i+1));}s.lineup=s.roster.slice(0,5).map(r=>r.id);ensureRivalTeams(s);addMoney(s,4000000,"収入","大学からの年間部費配分");addMoney(s,600000,"収入","OB・OG会の年間活動支援");addMoney(s,-2200000,"固定費","年間運営経費（施設・保険・指導補助・用具）");return s}
+function newGame(seed=20261008){let s={version:1,year:1,week:0,rng:(seed>>>0)||1,cash:0,roster:[],lineup:[],ledger:[],history:[],alumni:[],items:{camp:0,science:0,recovery:0,rain:0,elite:0},scouting:0,offer:null,prediction:null,ending:null,race:null,lastLog:"創部1年目。全国駅伝の絶対王者・北稜大学に挑戦します。",awards:0};for(let i=0;i<10;i++){let grade=i<2?4:i<5?3:i<8?2:1;s.roster.push(makeRunner(s,NAMES[i],grade,i+1));}s.lineup=s.roster.slice(0,5).map(r=>r.id);ensureRivalTeams(s);addMoney(s,4000000,"収入","大学からの年間部費配分");addMoney(s,600000,"収入","OB・OG会の年間活動支援");addMoney(s,-2200000,"固定費","年間運営経費（施設・保険・指導補助・用具）");return s}
 
 function validate(s){
   if(!s||s.version!==1||!Number.isInteger(s.year)||s.year<1||s.year>1000||!Number.isInteger(s.week)||s.week<0||s.week>12||!Number.isInteger(s.rng)||!Number.isSafeInteger(s.cash)||s.cash<0)
@@ -54,7 +54,8 @@ function validate(s){
   }
   if("alumni" in s && (!Array.isArray(s.alumni)||s.alumni.length>10000))throw Error("卒業生データが不正です");
   if("scouting" in s && (!Number.isInteger(s.scouting)||s.scouting<0||s.scouting>3))throw Error("スカウト投資が不正です");
-  if(!s.items||!["camp","science","recovery","rain"].every(k=>Number.isInteger(s.items[k])&&s.items[k]>=0&&s.items[k]<=100))throw Error("備品の保有データが不正です");
+  if(!s.items||!["camp","science","recovery","rain"].every(k=>Number.isInteger(s.items[k])&&s.items[k]>=0&&s.items[k]<=100)||
+    ("elite" in s.items&&(!Number.isInteger(s.items.elite)||s.items.elite<0||s.items.elite>3)))throw Error("備品の保有データが不正です");
   if(s.rivalTeams!==undefined&&(!Array.isArray(s.rivalTeams)||s.rivalTeams.length!==7||s.rivalTeams.some(t=>
     !t||!Array.isArray(t.roster)||t.roster.length!==10||!Number.isSafeInteger(t.cash)||t.cash<0||
     !t.finance||!Number.isSafeInteger(t.finance.income)||!Number.isSafeInteger(t.finance.expenses)||
@@ -71,6 +72,7 @@ function migrateSave(s){
   if(s.prediction===undefined)s.prediction=null;
   if(s.ending===undefined)s.ending=null;
   if(!Array.isArray(s.alumni))s.alumni=[];
+  if(s.items&&s.items.elite===undefined)s.items.elite=0;
   ensureRivalTeams(s);
   for(const team of s.rivalTeams)if(!Number.isSafeInteger(team.finance.opening))team.finance.opening=team.cash-team.finance.income+team.finance.expenses;
   if(s.race){
@@ -87,7 +89,7 @@ function migrateSave(s){
 
 function setLineup(s,ids){if(s.prediction&&s.prediction.status==="placed")throw Error("順位予想の購入後は区間配置を変更できません");if(s.race)throw Error("大会開催中は区間配置を変更できません");if(!Array.isArray(ids)||ids.length!==5||new Set(ids.map(Number)).size!==5||ids.some(id=>!s.roster.some(r=>r.id===Number(id))))throw Error("異なる選手を5名選んでください");s.lineup=ids.map(Number);return s}
 
-function buyItem(s,key){if(s.race||s.week>=12)throw Error("大会前の練習期間のみ購入できます");let special=key==="invite";let item=special&&s.offer&&s.week<=s.offer.expires?{name:"特別合同合宿への招待枠",cost:260000}:SHOP[key];if(!item)throw Error("その備品はありません");let stockKey=special?"camp":key;if(key!=="recovery" && s.items[stockKey]>=2)throw Error("同一アイテムの保管上限は2個です");if(s.cash-item.cost<480000+(12-s.week)*38000)throw Error("残りの最低練習費と大会遠征費を確保してください");addMoney(s,-item.cost,"購入費",item.name);if(key==="recovery"){for(const r of s.roster){r.fatigue=clamp(r.fatigue-23,0,100);r.morale=clamp(r.morale+6,0,100);}s.lastLog="栄養・回復支援により疲労を軽減しました。";}else{s.items[stockKey]++;if(special)s.offer=null;s.lastLog=item.name+"を購入しました（次回の対象機会に使用）。";}return s}
+function buyItem(s,key){if(s.race||s.week>=12)throw Error("大会前の練習期間のみ購入できます");let special=key==="invite";let item=special&&s.offer&&s.week<=s.offer.expires?{name:"特別合同合宿への招待枠",cost:260000}:SHOP[key];if(!item)throw Error("その備品はありません");let stockKey=special?"camp":key;if(key==="elite"&&s.items.elite>0)throw Error("全国強化プログラムは使い切ってから再購入してください");if(key!=="recovery" && key!=="elite" && s.items[stockKey]>=2)throw Error("同一アイテムの保管上限は2個です");if(s.cash-item.cost<480000+(12-s.week)*38000)throw Error("残りの最低練習費と大会遠征費を確保してください");addMoney(s,-item.cost,"購入費",item.name);if(key==="recovery"){for(const r of s.roster){r.fatigue=clamp(r.fatigue-23,0,100);r.morale=clamp(r.morale+6,0,100);}s.lastLog="栄養・回復支援により疲労を軽減しました。";}else{s.items[stockKey]+=key==="elite"?3:1;if(special)s.offer=null;s.lastLog=item.name+"を購入しました（次回の対象機会に使用）。";}return s}
 
 function investScouting(s){
   if(s.race||s.week>=12)throw Error("スカウト活動は練習期間中に行います");
@@ -101,7 +103,7 @@ function investScouting(s){
   return s;
 }
 
-function train(s,focus="stamina",intensity="normal"){if(s.race)throw Error("大会開催中です");if(s.week>=12)throw Error("練習期間が終了しました。大会へ進んでください");if(!SKILLS.includes(focus))throw Error("能力値が不正です");if(!["light","normal","hard"].includes(intensity))throw Error("練習強度が不正です");let cost={light:38000,normal:72000,hard:110000}[intensity], factor={light:0.65,normal:1,hard:1.35}[intensity],fatigue={light:2,normal:6,hard:12}[intensity];if(s.cash-cost<480000+(11-s.week)*38000)throw Error("残りの最低練習費と大会遠征費を確保してください");addMoney(s,-cost,"練習費",["調整練習","通常練習","高強度練習"][["light","normal","hard"].indexOf(intensity)]);let camp=s.items.camp>0,science=s.items.science>0;if(camp)s.items.camp--;if(science)s.items.science--;let lucky=0,breakdowns=0;for(const r of s.roster){const selected=s.lineup.includes(r.id);let gain=between(s,1.25,1.95)*factor*(0.8+r.stats.recovery/380);if(selected&&camp)gain*=2;if(selected&&science)gain*=1.35;if(random(s)<0.055 && r.fatigue<55){gain*=2;lucky++;}gain*=r.fatigue>75?0.62:1;r.stats[focus]=Math.round(clamp(r.stats[focus]+gain,0,99)*10)/10;r.fatigue=clamp(r.fatigue+fatigue+(selected&&camp?5:0)-between(s,1,4)-r.stats.recovery/85,0,100);r.morale=clamp(r.morale+between(s,-3,2),15,100);if(r.fatigue>83&&random(s)<0.15){r.fatigue=clamp(r.fatigue+8,0,100);r.morale=clamp(r.morale-8,0,100);breakdowns++;}}rivalTraining(s);s.week++;if(s.offer && s.week>s.offer.expires)s.offer=null;let newInvite=false;if(s.week<12&&!s.offer&&random(s)<0.055){s.offer={expires:Math.min(11,s.week+2)};newInvite=true;}s.lastLog=`第${s.week}週：${focus}を強化。`+(camp?" 強化合宿の成長2倍が発動。":"")+(science?" 科学測定の成長1.35倍が発動。":"")+(lucky?` ${lucky}名が好調で成長2倍。`:"")+(breakdowns?` ${breakdowns}名が疲労でコンディション悪化。`:"")+(newInvite?" 合同合宿の招待枠が届いた！期限内なら参加費を節約できます。":"");return s}
+function train(s,focus="stamina",intensity="normal"){if(s.race)throw Error("大会開催中です");if(s.week>=12)throw Error("練習期間が終了しました。大会へ進んでください");if(!SKILLS.includes(focus))throw Error("能力値が不正です");if(!["light","normal","hard"].includes(intensity))throw Error("練習強度が不正です");let cost={light:38000,normal:72000,hard:110000}[intensity], factor={light:0.65,normal:1,hard:1.35}[intensity],fatigue={light:2,normal:6,hard:12}[intensity];if(s.cash-cost<480000+(11-s.week)*38000)throw Error("残りの最低練習費と大会遠征費を確保してください");addMoney(s,-cost,"練習費",["調整練習","通常練習","高強度練習"][["light","normal","hard"].indexOf(intensity)]);let camp=s.items.camp>0,science=s.items.science>0,elite=(s.items.elite||0)>0;if(camp)s.items.camp--;if(science)s.items.science--;if(elite)s.items.elite--;let lucky=0,breakdowns=0;for(const r of s.roster){const selected=s.lineup.includes(r.id);let gain=between(s,1.25,1.95)*factor*(0.8+r.stats.recovery/380);if(selected&&camp)gain*=2;if(selected&&science)gain*=1.35;if(selected&&elite)gain*=1.6;if(random(s)<0.055 && r.fatigue<55){gain*=2;lucky++;}gain*=r.fatigue>75?0.62:1;r.stats[focus]=Math.round(clamp(r.stats[focus]+gain,0,99)*10)/10;r.fatigue=clamp(r.fatigue+fatigue+(selected&&camp?5:0)+(selected&&elite?4:0)-between(s,1,4)-r.stats.recovery/85,0,100);r.morale=clamp(r.morale+between(s,-3,2),15,100);if(r.fatigue>83&&random(s)<0.15){r.fatigue=clamp(r.fatigue+8,0,100);r.morale=clamp(r.morale-8,0,100);breakdowns++;}}rivalTraining(s);s.week++;if(s.offer && s.week>s.offer.expires)s.offer=null;let newInvite=false;if(s.week<12&&!s.offer&&random(s)<0.055){s.offer={expires:Math.min(11,s.week+2)};newInvite=true;}s.lastLog=`第${s.week}週：${focus}を強化。`+(camp?" 強化合宿の成長2倍が発動。":"")+(science?" 科学測定の成長1.35倍が発動。":"")+(elite?" 全国強化プログラムの成長1.6倍が発動（残り"+s.items.elite+"回）。":"")+(lucky?` ${lucky}名が好調で成長2倍。`:"")+(breakdowns?` ${breakdowns}名が疲労でコンディション悪化。`:"")+(newInvite?" 合同合宿の招待枠が届いた！期限内なら参加費を節約できます。":"");return s}
 
 function paceFor(stats,hillIndex,gritBoost){return 270.5-0.355*stats.speed-0.245*stats.stamina-(hillIndex===1?0.205:hillIndex===3?0.055:0.115)*stats.hill-0.13*(stats.grit+gritBoost)}
 
