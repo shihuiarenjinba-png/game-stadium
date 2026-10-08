@@ -58,7 +58,7 @@ async function run(){
   assert.ok(["won","lost"].includes(payoutStatus));
   await screenshot("03-finish");
   await click("close");
-  assert.match(await query("document.body.innerText"),/2年目/);
+  assert.equal(await query("JSON.parse(localStorage.getItem(\'ekiden-manager-v1\')).year"),2);
   assert.match(await query("document.body.innerText"),/歴代成績・年度決算/);
   await screenshot("04-year-two");
   // Responsive and zoom smoke: this is not a substitute for a human DPI review.
