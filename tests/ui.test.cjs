@@ -8,7 +8,7 @@ const vm=require("node:vm");
 function createUiHarness(){
   let markup="",handlers={},saved=new Map();
   const root={set innerHTML(value){markup=value;},get innerHTML(){return markup;}};
-  const fields={focus:"stamina",intensity:"normal",strategy:"steady"};
+  const fields={focus:"stamina",intensity:"normal",strategy:"steady",water:"1"};
   const document={
     getElementById(id){if(id==="app")return root;return {value:fields[id]??(id.startsWith("leg-")?String(Number(id.slice(-1))+1):""),files:[],click(){}};},
     addEventListener(type,fn){handlers[type]=fn;}
@@ -50,6 +50,9 @@ test("training, scouting, checkpoint map, year-end accounting, and autosave run 
   assert.equal(app.state.prediction.stake,50000);
   assert.match(app.markup,/id="leg-0" disabled/,"purchased rank ticket freezes the lineup editor");
   app.click("start");
+  assert.match(app.markup,/給水ステーション/);
+  assert.match(app.markup,/水分コンディション/);
+  assert.match(app.markup,/大学生活・突発イベント/);
   assert.match(app.markup,/スタート前/);
   assert.match(app.markup,/class="course"/);
   for(let checkpoint=0;checkpoint<15;checkpoint++){
@@ -58,6 +61,9 @@ test("training, scouting, checkpoint map, year-end accounting, and autosave run 
     assert.equal(app.state.race.notes.length,checkpoint+1);
   }
   assert.equal(app.state.race.finished,true);
+  assert.equal(app.state.race.waterSpent,15*app.engine.WATER_COST);
+  assert.equal(app.state.race.waterCups,15);
+  assert.equal(app.state.ledger.filter(x=>x.kind==="大会給水費").length,15);
   assert.match(app.markup,/EKIDEN LIVE/);
   assert.ok(["won","lost"].includes(app.state.prediction.status));
   assert.match(app.markup,/年度決算を確定して次年度へ/);
