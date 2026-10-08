@@ -40,6 +40,10 @@ test("training, scouting, checkpoint map, year-end accounting, and autosave run 
   for(let w=0;w<12;w++)app.click("train");
   assert.equal(app.state.week,12);
   assert.match(app.markup,/レース順位予想・オッズ/);
+  assert.match(app.markup,/512回のレース試算/);
+  assert.match(app.markup,/value="30000"/);
+  assert.match(app.markup,/value="390000"/);
+  assert.match(app.markup,/晴384・雨128/);
   app.click("prediction");
   assert.equal(app.state.prediction.status,"placed");
   assert.equal(app.state.prediction.stake,50000);
