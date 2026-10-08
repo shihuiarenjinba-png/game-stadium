@@ -171,7 +171,7 @@
 
   function render(){
     const root=document.getElementById("app");
-    root.innerHTML='<div class="wrap"><header class="top"><div><div class="eyebrow">University long-distance strategy</div><h1 class="brand">EKIDEN <span class="accent">MANAGER</span></h1><div class="sub">栄光への襷 — 育成 × レース戦術 × 部費経営</div></div><span class="tag">OFFLINE ALPHA v0.4.1</span></header>'+
+    root.innerHTML='<div class="wrap"><header class="top"><div><div class="eyebrow">University long-distance strategy</div><h1 class="brand">EKIDEN <span class="accent">MANAGER</span></h1><div class="sub">栄光への襷 — 育成 × レース戦術 × 部費経営</div></div><span class="tag">OFFLINE ALPHA v0.5.0</span></header>'+
       statsCards()+'<div class="notice">'+esc(flash||state.lastLog)+'</div><div class="layout"><div>'+
       (state.week>=12&&!state.race&&!state.ending?predictionMarket():'')+racing()+training()+schoolEvents()+lineup()+runners()+'</div><aside>'+tutorial()+(state.week>=12&&!state.race&&!state.ending?'':predictionMarket())+finance()+store()+rivalDashboard()+history()+'</aside></div>'+
       '<footer class="footer"><div>ゲームの選手・大学・財務は架空設定です。結果は乱数シードで再現可能です。</div><div class="flex"><button class="btn small ghost" data-action="export">セーブ書き出し</button><button class="btn small ghost" data-action="import">セーブ読込</button><button class="btn small danger" data-action="reset">最初から</button><input type="file" id="savefile" accept=".json,application/json" hidden/></div></footer></div>';
