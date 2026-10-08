@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node --test tests/*.test.cjs",
     "dev": "electron .",
-    "build:win": "python scripts/make_icon.py && electron-builder --win --x64 --publish never"
+    "build:win": "python scripts/make_icon.py && electron-builder --win --x64 --publish never",
+    "test:desktop": "electron desktop/smoke.cjs"
   },
   "engines": {
     "node": ">=20"
