@@ -53,7 +53,7 @@
       return panel("全国大学駅伝","全8大学・50km",'<p class="muted">大会開始後、区間ごとにペース作戦を選択して順位を競います。出場には遠征費¥480,000が必要です。</p><button class="btn" data-action="start" '+(state.cash<480000?"disabled":"")+'>大会を開始する →</button>');
     }
     const r=state.race;
-    const info='<div class="flex"><span class="pill">'+r.weather+'</span><span class="pill">'+(r.finished?"全区間終了":'次は'+E.LEGS[r.leg].title)+'</span><span class="pill">現在 '+r.rank+' 位</span></div>';
+    const info='<div class="flex"><span class="pill">'+r.weather+'</span><span class="pill">'+(r.finished?"全区間終了":'次は'+E.LEGS[r.leg].title)+'</span><span class="pill">'+(r.rank===null?'スタート前':'現在 '+r.rank+' 位')+'</span></div>';
     const choice=r.finished?'<div class="notice"><strong>'+r.rank+'位でゴール！</strong><br>'+(r.rank===1?'全国優勝です！強豪校の連覇を阻止しました。':'大学の年間記録を確認し、翌シーズンで挑みましょう。')+'</div><button class="btn" data-action="close">年度決算を確定して次年度へ →</button>':'<div class="controlrow"><div class="field"><label for="strategy">次区間の指示</label><select id="strategy"><option value="save">体力温存</option><option value="steady" selected>標準ペース</option><option value="push">積極策・攻め</option></select></div><button class="btn" data-action="next">次の区間を走る →</button></div><p class="muted tiny">「攻め」は体力があると速く、持久力が不足すると大幅に失速します。</p>';
     return panel("全国大学駅伝","レース進行中",info+standing()+'<div class="divider"></div>'+choice)
   }
