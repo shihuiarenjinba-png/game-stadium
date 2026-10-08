@@ -46,13 +46,16 @@
           ]
         }
       ],
-      "artifactName": "EKIDEN-MANAGER-${version}-${arch}-${name}.${ext}",
       "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true
+      "createDesktopShortcut": true,
+      "artifactName": "EKIDEN-MANAGER-Setup-${version}-${arch}.${ext}"
+    },
+    "portable": {
+      "artifactName": "EKIDEN-MANAGER-Portable-${version}-${arch}.${ext}"
     }
   }
 }
