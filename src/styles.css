@@ -7,3 +7,13 @@
 .track{margin-top:15px}
 .ranking .ranktime{min-width:115px;text-align:right}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+
+/* CPU campus scouting cards: compact in the sidebar, expandable for advanced players. */
+.rival-team{border:1px solid #39515d;border-radius:10px;margin-top:9px;overflow:hidden;background:#172833}
+.rival-team summary{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;cursor:pointer;list-style:none}
+.rival-team summary::-webkit-details-marker{display:none}
+.rival-team[open] summary{background:#243944;border-bottom:1px solid #41545d}
+.rival-inside{padding:7px 12px 12px}
+.rival-inside table{width:100%}
+.rival-inside th,.rival-inside td{padding:6px 3px}
+.rival-inside .line{flex-wrap:wrap}
