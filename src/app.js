@@ -18,7 +18,7 @@
     const avg=Math.round(state.roster.reduce((a,b)=>a+average(b),0)/state.roster.length);
     const amount=state.race?(state.race.finished?"完走":("第"+Math.min(5,state.race.leg+1)+"区 "+((state.race.segment||0)+1)+"/3")):(state.week>=12?"大会直前":"練習中");
     return '<div class="statgrid">'+[
-      ["シーズン",state.year+"年目",state.week+"/12週 "+amount],
+      ["シーズン",state.year+" / "+E.MAX_SEASONS+"年",state.week+"/12週 "+amount],
       ["部費残高",yen(state.cash),"収支は年次決算で確認"],
       ["チーム総合力",avg,"全選手の能力平均"],
       ["全国制覇",state.awards+"回","強豪・北稜大学に挑戦"]
@@ -44,24 +44,26 @@
     return panel("部費で購入する支援・備品","魔法アイテムなし",'<p class="tiny muted">支援効果はゲーム用に誇張していますが、合宿・測定・補給・装備など実在する活動に費用を割り当てています。購入費は全額その年度に記帳します。</p>'+recruitment+invite+shop)
   }
   // No 3D characters: a schematic 2D route with distance-scaled checkpoint markers.
+
   function courseMap(){
     const race=state.race;if(!race)return "";
-    const kmFinished=E.LEGS.slice(0,race.leg).reduce((n,x)=>n+x.km,0)+(race.leg<5?E.LEGS[race.leg].km*(race.segment||0)/3:0);
-    const points=[[19,107],[75,51],[129,82],[182,28],[233,92],[278,48],[321,39]];
-    const pos=f=>{let t=Math.min(.999999,Math.max(0,f))*(points.length-1),i=Math.floor(t),a=t-i;return [points[i][0]*(1-a)+points[i+1][0]*a,points[i][1]*(1-a)+points[i+1][1]*a]};
-    const leader=race.contestants.length?Math.min(...race.contestants.map(c=>c.total)):0;
+    const covered=E.LEGS.slice(0,race.leg).reduce((n,l)=>n+l.km,0)+(race.leg<5?E.LEGS[race.leg].km*(race.segment||0)/3:0);
+    const first=race.contestants.length?Math.min(...race.contestants.map(c=>c.total)):0;
+    const rxs=[187,178,169,160,151,142,133,124],rys=[91,85,79,73,67,61,55,49];
+    const lanes=rxs.map((rx,i)=>'<ellipse cx="230" cy="122" rx="'+rx+'" ry="'+rys[i]+'" fill="none" stroke="'+(i%2?"#56795f":"#719c77")+'" stroke-width="7.2" opacity=".92"/>').join("");
     const dots=race.contestants.map((c,i)=>{
-      const last=c.splits.at(-1),secKm=last?.pace>0?last.pace:216;
-      const distance=Math.max(0,kmFinished-Math.max(0,c.total-leader)/secKm),[x,y]=pos(distance/50);
-      const fill=c.human?"#e7c076":c.boss?"#db786f":(["#8accc4","#8ab1d5","#a6a5db","#e8a4b1","#88bf9d","#bfcab5"][i%6]);
-      // Screen-space fan-out prevents all eight teams overlapping at photo-finish precision.
-      // Rank labels are schematic; the exact time gaps remain in the ranking table.
-      const markerX=Math.max(13,Math.min(327,x+(i%2?4:-4)));
-      const markerY=Math.max(10,Math.min(118,Math.max(45,Math.min(83,y))+(i-3.5)*10));
-      return '<g><line x1="'+x.toFixed(1)+'" y1="'+y.toFixed(1)+'" x2="'+markerX.toFixed(1)+'" y2="'+markerY.toFixed(1)+'" stroke="'+fill+'" stroke-width="1.3" opacity=".65"/><circle cx="'+markerX.toFixed(1)+'" cy="'+markerY.toFixed(1)+'" r="8.4" fill="'+fill+'" stroke="#10222d" stroke-width="2"><title>'+esc(c.name)+'・'+(i+1)+'位</title></circle><text x="'+markerX.toFixed(1)+'" y="'+(markerY+3.1).toFixed(1)+'" fill="#10222d" font-size="9" font-weight="bold" text-anchor="middle">'+(i+1)+'</text>'+(c.human?'<circle cx="'+markerX.toFixed(1)+'" cy="'+markerY.toFixed(1)+'" r="11.3" fill="none" stroke="#f7e7b6" stroke-width="1.5"/>':'')+'</g>';
+      const pace=c.splits.length&&c.splits.at(-1).pace>0?c.splits.at(-1).pace:215;
+      const progress=Math.max(0,covered-Math.max(0,c.total-first)/pace)/50;
+      const angle=-Math.PI/2+2*Math.PI*progress;
+      const x=230+rxs[i]*Math.cos(angle),y=122+rys[i]*Math.sin(angle);
+      const fill=c.human?"#e6bf67":c.boss?"#e87966":(["#9bd6d0","#b3b1e1","#f1abca","#b7d389","#a8b8db","#d7ba97"][i%6]);
+      return '<g class="race-marker"><circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(c.human?12:10)+'" fill="'+fill+'" stroke="#10232e" stroke-width="2"><title>'+esc(c.name)+' / '+(i+1)+'位</title></circle><text x="'+x.toFixed(1)+'" y="'+(y+3.4).toFixed(1)+'" fill="#14232b" text-anchor="middle" font-weight="900" font-size="10">'+(i+1)+'</text></g>';
     }).join("");
-    const course=points.map(p=>p.join(",")).join(" ");
-    return '<div class="course" role="img" aria-label="各大学の走行位置を示す2Dコース図"><svg viewBox="0 0 340 128" width="100%" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="338" height="126" rx="11" fill="#233b3c"/><polyline points="'+course+'" fill="none" stroke="#516b63" stroke-width="20" stroke-linejoin="round" stroke-linecap="round"/><polyline points="'+course+'" fill="none" stroke="#dfcfa8" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><polyline points="'+course+'" fill="none" stroke="#fff3d8" stroke-width="1.5" stroke-dasharray="2 5"/><text x="16" y="122" fill="#e4e8df" font-size="10">START</text><text x="278" y="20" fill="#e4e8df" font-size="10">FINISH</text>'+dots+'</svg></div><div class="line tiny"><span class="muted">進行距離 '+kmFinished.toFixed(1)+' / 50km</span><span><span class="accent">●</span> 自校　<span style="color:#db786f">●</span> 北稜</span></div><div class="tiny muted" style="margin-bottom:10px">※マーカーは重なりを防ぐため縦に分離した模式表示。正確な差は順位表のタイムを参照。</div>';
+    return '<div class="race-live-bar"><span class="live-dot"></span><strong>EKIDEN LIVE</strong><span>全国大学駅伝　'+state.year+'年目</span><span class="race-live-right">'+(race.finished?'FINISH':('第'+(race.leg+1)+'区　'+((race.segment||0)+1)+'/3地点'))+'</span></div>'+
+      '<div class="course" role="img" aria-label="競馬中継風の2D周回模式コース。大学ごとに色付きの順位番号を表示"><svg viewBox="0 0 460 245" width="100%" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="field" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#25473e"/><stop offset="100%" stop-color="#132d29"/></linearGradient></defs><rect x="1" y="1" width="458" height="243" rx="13" fill="url(#field)"/><ellipse cx="230" cy="122" rx="195" ry="99" fill="#2a5943" stroke="#a8c59d" stroke-width="1.5"/>'+lanes+'<ellipse cx="230" cy="122" rx="116" ry="42" fill="#18362f"/><text x="230" y="115" text-anchor="middle" fill="#e5ecdf" font-weight="900" font-size="19" letter-spacing="2">EKIDEN</text><text x="230" y="134" text-anchor="middle" fill="#c7dbcc" font-size="11">50 km CHAMPIONSHIP</text><path d="M229 14V53" stroke="#f6e5cb" stroke-width="3" stroke-dasharray="5 4"/><text x="240" y="20" font-size="10" fill="#fff2d1">GOAL</text>'+dots+'</svg></div>'+
+      '<div class="race-progress"><div class="race-progress-fill" style="width:'+Math.round(covered/50*100)+'%"></div></div>'+
+      '<div class="line tiny"><span>'+covered.toFixed(1)+' / 50 km</span><span><span class="accent">●</span> 自校　<span style="color:#e87966">●</span> 北稜大学</span></div>'+
+      '<p class="mini muted">競馬中継をイメージした模式図です。正確なタイム差は下の順位表で確認してください。</p>';
   }
   function standing(){
     if(!state.race)return "";
@@ -84,8 +86,11 @@
     }
     const r=state.race;
     const info='<div class="flex"><span class="pill">'+r.weather+'</span><span class="pill">'+(r.finished?"全区間終了":'次は'+E.LEGS[r.leg].title)+'</span><span class="pill">'+(r.rank===null?'スタート前':'現在 '+r.rank+' 位')+'</span></div>';
-    const choice=r.finished?'<div class="notice"><strong>'+r.rank+'位でゴール！</strong><br>'+(r.rank===1?'全国優勝です！強豪校の連覇を阻止しました。':'大学の年間記録を確認し、翌シーズンで挑みましょう。')+'</div><button class="btn" data-action="close">年度決算を確定して次年度へ →</button>':'<div class="controlrow"><div class="field"><label for="strategy">次チェックポイントの指示</label><select id="strategy"><option value="save">体力温存</option><option value="steady" selected>標準ペース</option><option value="push">積極策・攻め</option></select></div><button class="btn" data-action="next">次の地点へ →</button><button class="btn secondary" data-action="skip">区間終了まで進む</button></div><p class="muted tiny">各区間を3分割（全15地点）。攻めは体力消費32、標準21、温存13。使い切ると終盤に失速します。</p>';
-    return panel("全国大学駅伝","レース進行中",info+standing()+'<div class="divider"></div>'+choice)
+    const choice=r.finished?('<div class="finish-banner '+(state.ending==="lost"?"defeat":r.rank===1?"victory":"")+'"><div class="eyebrow">'+(state.ending==="lost"?"GAME OVER":r.rank===1?"CHAMPION":"RACE FINISHED")+'</div><strong>'+r.rank+'位でゴール！</strong><div class="tiny">'+(state.ending==="won"?"8年間の挑戦達成！":state.ending==="lost"?"8年間で全国優勝できず、監督生活は終了です。":r.rank===1?"全国優勝達成！続きの年度もプレイできます。":"年間記録を見て、来季の強化につなげましょう。")+'</div></div>'+
+      (state.prediction?'<div class="notice">順位予想：'+(state.prediction.status==="won"?"的中！ "+yen(state.prediction.payout)+"を部費に加算しました。":"不的中。購入額は部費の支出になりました。")+'</div>':'')+
+      (state.ending?'<button class="btn secondary" data-action="reset">新しい監督生活を始める</button>':'<button class="btn" data-action="close">年度決算を確定して次年度へ →</button>')):
+      '<div class="controlrow"><div class="field"><label for="strategy">次チェックポイントの指示</label><select id="strategy"><option value="save">体力温存</option><option value="steady" selected>標準ペース</option><option value="push">積極策・攻め</option></select></div><button class="btn" data-action="next">次の地点へ →</button><button class="btn secondary" data-action="skip">区間終了まで進む</button></div><p class="muted tiny">全15地点で指示できます。攻めすぎると体力が尽きて大幅に失速します。</p>';
+        return panel("全国大学駅伝","レース進行中",info+standing()+'<div class="divider"></div>'+choice)
   }
   function finance(){
     const f=E.financials(state),entries=[...f.entries].reverse();
