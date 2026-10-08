@@ -212,3 +212,40 @@ test("the CPU league has reproducible long-term turnover, independent racing for
   assert.ok(a.rivalTeams.every(t=>t.roster.length===10&&t.lastRank!==null));
   assert.equal(G.financials(a).ending,a.cash);
 });
+
+
+test("personal records, complete historic standings and graduated alumni survive year rollover",()=>{
+  const s=G.newGame(912);
+  const seniors=s.roster.filter(r=>r.grade===4).map(r=>({id:r.id,name:r.name}));
+  for(let w=0;w<12;w++)G.train(s,"stamina","light");
+  G.startRace(s);
+  for(let checkpoint=0;checkpoint<15;checkpoint++)G.stepRace(s,"steady");
+  const runners=s.lineup.map(id=>s.roster.find(r=>r.id===id));
+  for(let leg=0;leg<5;leg++){
+    const d=String(G.LEGS[leg].km);
+    assert.ok(Number.isInteger(runners[leg].records?.[d]));
+    assert.equal(runners[leg].records[d],s.race.contestants.find(c=>c.human).splits[leg].seconds);
+  }
+  G.closeYear(s);
+  assert.equal(s.history[0].standings.length,8);
+  assert.deepEqual(s.history[0].standings.map(x=>x.rank),[1,2,3,4,5,6,7,8]);
+  assert.equal(new Set(s.history[0].standings.map(x=>x.name)).size,8);
+  assert.ok(s.history[0].standings.every(x=>x.seconds>0));
+  for(const senior of seniors){
+    const alum=s.alumni.find(x=>x.id===senior.id);
+    assert.ok(alum);
+    assert.equal(alum.graduationYear,1);
+    assert.equal(alum.name,senior.name);
+  }
+  G.validate(s);
+});
+test("old saves without an alumni ledger migrate without losing money",()=>{
+  const old=G.newGame(223),cash=old.cash;
+  delete old.alumni;
+  delete old.rivalTeams;
+  G.migrateSave(old);
+  assert.equal(old.cash,cash);
+  assert.deepEqual(old.alumni,[]);
+  assert.equal(old.rivalTeams.length,7);
+  G.validate(old);
+});
