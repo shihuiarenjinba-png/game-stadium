@@ -102,3 +102,67 @@ test("random joint-camp invitations need a real budget purchase and expire",()=>
   G.train(found,"stamina","normal");
   assert.equal(found.items.camp,stock);
 });
+
+test("15 checkpoints, realistic energy spending, and strategy-dependent pacing",()=>{
+  const a=G.newGame(138),b=G.newGame(138);
+  for(let i=0;i<12;i++){G.train(a,"stamina","light");G.train(b,"stamina","light");}
+  G.startRace(a);G.startRace(b);
+  G.stepRace(a,"save");
+  G.stepRace(b,"push");
+  assert.equal(a.race.leg,0);
+  assert.equal(a.race.segment,1);
+  assert.ok(a.race.contestants.find(c=>c.human).energy>b.race.contestants.find(c=>c.human).energy);
+  const aHuman=a.race.contestants.find(c=>c.human),bHuman=b.race.contestants.find(c=>c.human);
+  assert.ok(aHuman.total>bHuman.total,"saving is slower at the first checkpoint");
+  for(let i=1;i<15;i++)G.stepRace(a,i%3===2?"push":"steady");
+  assert.equal(a.race.leg,5);
+  assert.equal(a.race.segment,0);
+  assert.equal(a.race.finished,true);
+  assert.equal(a.race.notes.length,15);
+  for(const competitor of a.race.contestants){
+    assert.equal(competitor.splits.length,5);
+    assert.ok(competitor.splits.every(split=>split.partials.length===3));
+    assert.equal(competitor.total,competitor.splits.reduce((sum,split)=>sum+split.seconds,0));
+  }
+  assert.equal(G.financials(a).ending,a.cash);
+});
+test("annual operating costs are actually charged each year, without double charging",()=>{
+  const s=G.newGame(51);
+  playYear(s);
+  const oldFixed=s.ledger.filter(x=>x.kind==="固定費").reduce((n,x)=>n+x.amount,0);
+  assert.equal(oldFixed,-2200000);
+  G.closeYear(s);
+  const current=s.ledger.filter(x=>x.year===2&&x.kind==="固定費").reduce((n,x)=>n+x.amount,0);
+  assert.equal(current,-2200000);
+  assert.equal(G.financials(s,2).opening,s.history[0].finance.ending);
+  assert.equal(G.financials(s).ending,s.cash);
+});
+test("scouting is a paid long-term investment limited to 3 times per year",()=>{
+  const a=G.newGame(32),b=G.newGame(32);
+  for(let i=0;i<3;i++)G.investScouting(a);
+  assert.throws(()=>G.investScouting(a),/最大3回/);
+  assert.equal(a.ledger.filter(x=>x.kind==="採用・勧誘費").length,3);
+  for(let w=0;w<12;w++){G.train(a,"stamina","light");G.train(b,"stamina","light");}
+  G.startRace(a);G.startRace(b);
+  for(let i=0;i<5;i++){G.nextLeg(a);G.nextLeg(b);}
+  G.closeYear(a);G.closeYear(b);
+  const first=a.roster.filter(r=>r.grade===1),second=b.roster.filter(r=>r.grade===1);
+  assert.ok(first.every((r,i)=>r.stats.speed>second[i].stats.speed+5));
+  assert.equal(a.scouting,0);
+  assert.equal(G.financials(a).ending,a.cash);
+});
+test("malformed or tampered save data is rejected; v0.1 races can migrate",()=>{
+  const original=G.newGame(93),bad=JSON.parse(JSON.stringify(original));
+  bad.ledger[0].amount+=500000;
+  assert.throws(()=>G.validate(bad),/台帳と一致/);
+  const invalid=JSON.parse(JSON.stringify(original));
+  invalid.roster[0].stats.speed=Number.MAX_VALUE;
+  assert.throws(()=>G.validate(invalid),/能力値/);
+  for(let i=0;i<12;i++)G.train(original,"stamina","light");
+  G.startRace(original);
+  delete original.race.segment;
+  for(const opponent of original.race.contestants)if(!opponent.human)delete opponent.runners;
+  G.migrateSave(original);
+  G.stepRace(original,"steady");
+  assert.equal(original.race.segment,1);
+});
