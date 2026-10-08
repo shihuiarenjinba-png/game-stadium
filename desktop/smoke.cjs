@@ -40,6 +40,11 @@ async function run(){
   for(let i=0;i<12;i++)await click("train");
   const week=await query("JSON.parse(localStorage.getItem('ekiden-manager-v1')).week");
   assert.equal(week,12);
+  assert.match(await query("document.body.innerText"),/順位予想/);
+  await screenshot("02-odds");
+  await click("prediction");
+  const predictionStatus=await query("JSON.parse(localStorage.getItem('ekiden-manager-v1')).prediction.status");
+  assert.equal(predictionStatus,"placed");
   await click("start");
   assert.equal(await query("document.querySelectorAll('.course circle').length")>=8,true);
   for(let i=0;i<6;i++)await click("next");
@@ -49,6 +54,8 @@ async function run(){
   await screenshot("02-race");
   for(let i=6;i<15;i++)await click("next");
   assert.match(await query("document.body.innerText"),/大会終了/);
+  const payoutStatus=await query("JSON.parse(localStorage.getItem('ekiden-manager-v1')).prediction.status");
+  assert.ok(["won","lost"].includes(payoutStatus));
   await screenshot("03-finish");
   await click("close");
   assert.match(await query("document.body.innerText"),/2年目/);
