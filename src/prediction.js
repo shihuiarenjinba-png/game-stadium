@@ -5,29 +5,31 @@
   if(!G)return;
   const ROUNDS=160;
   function quotes(s){
-    const home=s.lineup.map(id=>s.roster.find(r=>r.id===id));
-    const teams=[{name:"あなたの大学",runners:home},...s.rivalTeams.map(t=>({name:t.name,runners:G.selectRivalLineup(t).map(id=>t.roster.find(r=>r.id===id))}))];
-    if(teams.some(t=>t.runners.some(r=>!r)))throw Error("出走選手不足");
-    let seed=(s.year*7919+teams.reduce((a,t)=>a+t.runners.reduce((sum,r)=>sum+Math.round((r.stats.speed+r.stats.stamina+r.stats.hill)*10),0),0))>>>0;
-    function random(){seed=(Math.imul(1664525,seed)+1013904223)>>>0;return seed/4294967296;}
-    function normal(){return Math.sqrt(-2*Math.log(Math.max(1e-10,random())))*Math.cos(random()*2*Math.PI);}
+    if(s.race||s.week!==12)throw Error("順位予想は大会直前のみ表示します");
+    const teams=[{name:"あなたの大学",runners:s.lineup.map(id=>s.roster.find(r=>r.id===id))},
+      ...s.rivalTeams.map(t=>({name:t.name,runners:G.selectRivalLineup(t).map(id=>t.roster.find(r=>r.id===id))}))];
+    if(teams.some(t=>t.runners.some(r=>!r)))throw Error("出走選手が不足しています");
     const counts=Object.fromEntries(teams.map(t=>[t.name,Array(8).fill(0)]));
-    for(let sim=0;sim<ROUNDS;sim++){
-      const ranks=teams.map(t=>{
-        let total=0;
-        t.runners.forEach((r,i)=>{
-          const p=270.5-0.355*r.stats.speed-0.245*r.stats.stamina-(i===1?.205:i===3?.055:.115)*r.stats.hill-0.13*r.stats.grit;
-          total+=(p+normal()*7.8+Math.max(0,r.fatigue-48)*.15)*G.LEGS[i].km;
-        });
-        return {name:t.name,total};
-      }).sort((a,b)=>a.total-b.total);
-      ranks.forEach((x,i)=>counts[x.name][i]++);
+    const rounds=160;
+    // Forecasts run the SAME simulation engine as the actual race, but only on cloned games.
+    // Seeds are independent from s.rng, so no prediction changes or exposes the live outcome.
+    const fingerprint=teams.reduce((n,t)=>n+t.runners.reduce((a,r)=>a+Math.round((r.stats.speed+r.stats.stamina+r.stats.hill+r.stats.grit)*10),0),s.year*117593);
+    let salt=(Math.imul(fingerprint|0,1664525)+1013904223)>>>0;
+    for(let k=0;k<rounds;k++){
+      salt=(Math.imul(salt,1664525)+1013904223)>>>0;
+      const clone=JSON.parse(JSON.stringify(s));
+      clone.rng=(salt^0x9E3779B9)>>>0;
+      clone.prediction=null;
+      G.startRace(clone);
+      // Representative default strategy: conserve first, steady middle, push final checkpoint.
+      for(let step=0;step<15;step++)G.stepRace(clone,step%3===0?"save":step%3===1?"steady":"push");
+      clone.race.contestants.forEach((c,rank)=>counts[c.name][rank]++);
     }
     return teams.map(t=>({
       name:t.name,
       strength:Math.round(t.runners.reduce((n,r)=>n+(r.stats.speed+r.stats.stamina+r.stats.hill+r.stats.grit)/4,0)/5),
       ranks:counts[t.name].map((n,i)=>{
-        const p=(n+1)/(ROUNDS+8);
+        const p=(n+1)/(rounds+8);
         return {rank:i+1,probability:Number((p*100).toFixed(1)),odds:Math.max(1.1,Math.min(16,Math.floor(.78/p*10)/10))};
       })
     }));
