@@ -97,7 +97,11 @@
       return panel("全国大学駅伝","全8大学・50km",'<p class="muted">大会開始後、区間ごとにペース作戦を選択して順位を競います。出場には遠征費¥480,000が必要です。</p><button class="btn" data-action="start" '+(state.cash<480000?"disabled":"")+'>大会を開始する →</button>');
     }
     const r=state.race;
-    const info='<div class="flex"><span class="pill">'+r.weather+'</span><span class="pill">'+(r.finished?"全区間終了":'次は'+E.LEGS[r.leg].title)+'</span><span class="pill">'+(r.rank===null?'スタート前':'現在 '+r.rank+' 位')+'</span></div>';
+    const human=r.contestants.find(c=>c.human);
+    const moisture=human&&Number.isFinite(human.hydration)?Math.round(human.hydration):62;
+    const belly=human&&Number.isFinite(human.stomach)?Math.round(human.stomach):0;
+    const condition=r.finished?'':'<div class="pit-gauges"><div><div class="line tiny"><span>選手の水分コンディション</span><strong>'+moisture+'/100</strong></div><div class="bar"><div class="fill" style="width:'+moisture+'%"></div></div></div><div><div class="line tiny"><span>胃の負担（多いほど不利）</span><strong>'+belly+'/120</strong></div><div class="bar"><div class="fill warn" style="width:'+Math.min(100,Math.round(belly/120*100))+'%"></div></div></div></div>';
+    const info='<div class="flex"><span class="pill">'+r.weather+'</span><span class="pill">'+(r.finished?"全区間終了":'次は'+E.LEGS[r.leg].title)+'</span><span class="pill">'+(r.rank===null?'スタート前':'現在 '+r.rank+' 位')+'</span></div>'+condition;
     const choice=r.finished?('<div class="finish-banner '+(state.ending==="lost"?"defeat":r.rank===1?"victory":"")+'"><div class="eyebrow">'+(state.ending==="lost"?"GAME OVER":r.rank===1?"CHAMPION":"RACE FINISHED")+'</div><strong>'+r.rank+'位でゴール！</strong><div class="tiny">'+(state.ending==="won"?"8年間の挑戦達成！":state.ending==="lost"?"8年間で全国優勝できず、監督生活は終了です。":r.rank===1?"全国優勝達成！続きの年度もプレイできます。":"年間記録を見て、来季の強化につなげましょう。")+'</div></div>'+
       (state.prediction?'<div class="notice">順位予想：'+(state.prediction.status==="won"?"的中！ "+yen(state.prediction.payout)+"を部費に加算しました。":"不的中。購入額は部費の支出になりました。")+'</div>':'')+
       (state.ending?'<button class="btn secondary" data-action="reset">新しい監督生活を始める</button>':'<button class="btn" data-action="close">年度決算を確定して次年度へ →</button>')):
