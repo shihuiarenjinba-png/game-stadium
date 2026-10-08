@@ -178,6 +178,7 @@ test("seven rival universities maintain individual 10-player rosters and unique 
     assert.equal(t.lineup.length,5);
     assert.equal(new Set(t.lineup).size,5);
     assert.equal(t.finance.income-t.finance.expenses,t.cash);
+    assert.equal(t.finance.opening+t.finance.income-t.finance.expenses,t.cash);
     for(const id of t.lineup)assert.ok(t.roster.some(r=>r.id===id));
   }
   const first=s.rivalTeams[0].roster.map(r=>({id:r.id,grade:r.grade}));
@@ -248,4 +249,18 @@ test("old saves without an alumni ledger migrate without losing money",()=>{
   assert.deepEqual(old.alumni,[]);
   assert.equal(old.rivalTeams.length,7);
   G.validate(old);
+});
+
+test("malformed CPU school athletes and mismatched team budgets cannot be imported",()=>{
+  const original=G.newGame(223);
+  const budget=JSON.parse(JSON.stringify(original));
+  budget.rivalTeams[0].finance.expenses+=5000;
+  assert.throws(()=>G.validate(budget),/CPU大学/);
+  const stat=JSON.parse(JSON.stringify(original));
+  stat.rivalTeams[2].roster[3].stats.speed=100000;
+  assert.throws(()=>G.validate(stat),/CPU大学/);
+  const legacy=JSON.parse(JSON.stringify(original));
+  for(const team of legacy.rivalTeams)delete team.finance.opening;
+  G.migrateSave(legacy);
+  assert.ok(legacy.rivalTeams.every(t=>t.finance.opening+t.finance.income-t.finance.expenses===t.cash));
 });
