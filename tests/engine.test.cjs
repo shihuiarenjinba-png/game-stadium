@@ -81,3 +81,24 @@ test("boss remains dominant in early years but becomes beatable after several cy
   assert.ok(first[5]/n>=0.25);
   assert.ok(ranks[5]<ranks[0]);
 });
+
+test("random joint-camp invitations need a real budget purchase and expire",()=>{
+  let found=null;
+  for(let seed=1;seed<=80&&!found;seed++){
+    const s=G.newGame(seed);
+    for(let w=0;w<11;w++){
+      G.train(s,"stamina","light");
+      if(s.offer){found=s;break;}
+    }
+  }
+  assert.ok(found,"a seeded invitation should occur");
+  const cash=found.cash,stock=found.items.camp;
+  G.buyItem(found,"invite");
+  assert.equal(found.cash,cash-260000);
+  assert.equal(found.items.camp,stock+1);
+  assert.equal(found.offer,null);
+  assert.equal(found.ledger.at(-1).label,"特別合同合宿への招待枠");
+  assert.equal(G.financials(found).ending,found.cash);
+  G.train(found,"stamina","normal");
+  assert.equal(found.items.camp,stock);
+});
