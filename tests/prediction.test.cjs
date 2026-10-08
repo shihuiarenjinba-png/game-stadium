@@ -50,6 +50,8 @@ test("fixed stake limits, pre-race window and remote-money safeguards",()=>{
  assert.throws(()=>P.place(s,"北稜大学",1,25001),/2万/);
  assert.throws(()=>P.place(s,"実在しない大学",1,50000),/大学/);
  P.place(s,"北稜大学",1,20000);
+ const changedLineup=[...s.lineup];changedLineup[4]=s.roster.find(r=>!changedLineup.includes(r.id)).id;
+ assert.throws(()=>G.setLineup(s,changedLineup),/購入後/,"do not manipulate team strength after buying odds");
  G.startRace(s);
  assert.throws(()=>P.place(s,"北稜大学",2,50000),/大会前/);
 });
