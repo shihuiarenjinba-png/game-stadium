@@ -97,11 +97,25 @@
     const reports=[...state.history].reverse().map(h=>{const f=E.financials(state,h.year);return '<details class="collapse"><summary class="tiny">'+h.year+'年目の決算明細（'+f.entries.length+'件）</summary><div class="ledger"><table><thead><tr><th>週</th><th>費目</th><th>内容</th><th class="num">金額</th></tr></thead><tbody>'+f.entries.map(x=>'<tr><td>'+x.week+'</td><td>'+esc(x.kind)+'</td><td>'+esc(x.label)+'</td><td class="num">'+yen(x.amount)+'</td></tr>').join("")+'</tbody></table></div></details>'}).join("");
     return panel("歴代成績・年度決算","全年度の明細を保存",'<div class="tablewrap"><table><thead><tr><th>年</th><th class="num">順位</th><th>優勝校</th><th class="num">収入</th><th class="num">支出</th><th class="num">収支</th><th class="num">期末残高</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+reports);
   }
+
+  function rivalDashboard(){
+    if(!Array.isArray(state.rivalTeams))return "";
+    const styles={speed:"スピード型",hill:"山岳重視",endurance:"持久力型",balanced:"総合力型"};
+    const schools=[...state.rivalTeams].sort((a,b)=>(a.lastRank??99)-(b.lastRank??99));
+    const cards=schools.map(team=>{
+      const starters=team.lineup.map(id=>team.roster.find(r=>r.id===id)).filter(Boolean);
+      const power=starters.length?Math.round(starters.reduce((n,r)=>n+average(r),0)/starters.length):0;
+      const detail='<div class="tablewrap"><table><thead><tr><th>出走選手</th><th class="num">学年</th><th class="num">速</th><th class="num">持</th><th class="num">坂</th></tr></thead><tbody>'+starters.map(r=>'<tr><td>'+esc(r.name)+'</td><td class="num">'+r.grade+'</td><td class="num">'+Math.round(r.stats.speed)+'</td><td class="num">'+Math.round(r.stats.stamina)+'</td><td class="num">'+Math.round(r.stats.hill)+'</td></tr>').join("")+'</tbody></table></div>';
+      return '<details class="rival-team"><summary><span><strong>'+esc(team.name)+'</strong>'+(team.boss?' <span class="accent">★ 王者</span>':'')+'<span class="tiny muted" style="display:block">'+(styles[team.style]||'育成型')+' / '+(team.lastRank?('昨季'+team.lastRank+'位'):'昨季の成績なし')+'</span></span><span class="tiny">総合 '+power+'　▾</span></summary><div class="rival-inside"><div class="line tiny"><span class="muted">大学の活動資金</span><strong>'+yen(team.cash)+'</strong></div><div class="line tiny"><span class="muted">当年度の収入 / 支出</span><strong>'+yen(team.finance.income)+' / '+yen(team.finance.expenses)+'</strong></div><p class="tiny muted">区間配置は各大学が自動判断します。選手は卒業し、次年度に新入生が加入します。</p>'+detail+'</div></details>';
+    }).join("");
+    return panel("ライバル大学の偵察","全7校が年間育成・会計・世代交代",'<p class="tiny muted">王者・北稜大学にも選手名簿と世代交代があります。順位は固定されず、その年の戦力と走りで決まります。</p>'+cards);
+  }
+
   function render(){
     const root=document.getElementById("app");
     root.innerHTML='<div class="wrap"><header class="top"><div><div class="eyebrow">University long-distance strategy</div><h1 class="brand">EKIDEN <span class="accent">MANAGER</span></h1><div class="sub">栄光への襷 — 育成 × レース戦術 × 部費経営</div></div><span class="tag">OFFLINE ALPHA v0.2</span></header>'+
       statsCards()+'<div class="notice">'+esc(flash||state.lastLog)+'</div><div class="layout"><div>'+
-      racing()+training()+lineup()+runners()+'</div><aside>'+finance()+store()+history()+'</aside></div>'+
+      racing()+training()+lineup()+runners()+'</div><aside>'+finance()+store()+rivalDashboard()+history()+'</aside></div>'+
       '<footer class="footer"><div>ゲームの選手・大学・財務は架空設定です。結果は乱数シードで再現可能です。</div><div class="flex"><button class="btn small ghost" data-action="export">セーブ書き出し</button><button class="btn small ghost" data-action="import">セーブ読込</button><button class="btn small danger" data-action="reset">最初から</button><input type="file" id="savefile" accept=".json,application/json" hidden/></div></footer></div>';
   }
   function execute(fn){flash="";try{fn();E.validate(state);persist();}catch(e){flash="操作できませんでした："+e.message;}render();}
