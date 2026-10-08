@@ -29,7 +29,7 @@ function train(s,focus="stamina",intensity="normal"){if(s.race)throw Error("大�
 
 function paceFor(stats,hillIndex,gritBoost){return 270.5-0.355*stats.speed-0.245*stats.stamina-(hillIndex===1?0.205:hillIndex===3?0.055:0.115)*stats.hill-0.13*(stats.grit+gritBoost)}
 
-function startRace(s){if(s.race)throw Error("すでに大会が始まっています");if(s.week<12)throw Error("12週の練習を終えてください");let contestants=[{name:"あなたの大学",total:0,splits:[],human:true},...RIVALS.map(x=>({...x,total:0,splits:[],runners:LEGS.map((_,i)=>makeRivalRunner(s,x,i))}))];let weather=random(s)<0.25?"雨":"晴";s.race={leg:0,segment:0,weather,contestants,notes:[],rank:null,finished:false};addMoney(s,-480000,"大会遠征費","宿泊・移動・大会参加関連費");s.lastLog=`全国駅伝が開幕。天候は${weather}。5区間、計50kmの戦いです。`;return s}
+function startRace(s){if(s.race)throw Error("すでに大会が始まっています");if(s.week<12)throw Error("12週の練習を終えてください");let contestants=[{name:"あなたの大学",total:0,splits:[],human:true},...RIVALS.map(x=>({...x,total:0,splits:[],runners:LEGS.map((_,i)=>makeRivalRunner(s,x,i))}))];let weather=random(s)<0.25?"雨":"晴";s.race={leg:0,segment:0,weather,contestants,notes:[],rank:null,finished:false,rainProtection:weather==="雨"&&s.items.rain>0};if(s.race.rainProtection)s.items.rain--;addMoney(s,-480000,"大会遠征費","宿泊・移動・大会参加関連費");s.lastLog=`全国駅伝が開幕。天候は${weather}。5区間、計50kmの戦いです。`;return s}
 
 // All CPU schools receive a fixed athlete per leg; training and form differ across years.
 // One uniform random seed governs all athlete draws, strategy choices and race-day noise.
@@ -70,7 +70,7 @@ function stepRace(s,stance="steady"){
     const tiredPenalty=fatigue>48?(fatigue-48)*0.15:0;
     const moralePenalty=(75-morale)*0.09;
     const weatherPenalty=rain?3.0:0;
-    const rainKit=c.human&&s.items.rain>0&&rain?0.35:1;
+    const rainKit=c.human&&race.rainProtection&&rain?0.35:1;
     const senior=c.legBonus*(c.human?1:0.85);
     const randomSegment=normal(s)*2.6;
     const badEvent=random(s)<0.015?between(s,5,12):0;
@@ -88,7 +88,7 @@ function stepRace(s,stance="steady"){
     }else if(badEvent>0)notes.push(c.name+"に失速");
   }
   race.segment++;
-  if(leg===0 && segment===0 && rain && s.items.rain>0){s.items.rain--;notes.push("雨天用装備が活躍");}
+  if(leg===0 && segment===0 && race.rainProtection)notes.push("雨天用装備が活躍");
   race.contestants.sort((a,b)=>a.total-b.total);
   race.rank=race.contestants.findIndex(c=>c.human)+1;
   const checkpoint=""+(leg+1)+"区 "+race.segment+"/3地点";
