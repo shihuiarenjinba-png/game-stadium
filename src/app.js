@@ -40,13 +40,14 @@
   function store(){
     const protectedCash=480000+(12-state.week)*38000;
     const usableCash=Math.max(0,state.cash-protectedCash);
+    const normalPlanCash=Math.max(0,state.cash-480000-(12-state.week)*72000);
     const shop=Object.entries(E.SHOP).map(([key,item])=>{
-      const available=state.week<12&&!state.race&&state.cash-item.cost>=protectedCash&&(key!=="elite"||(state.items.elite||0)===0);
+      const available=state.week<12&&!state.race&&state.cash-item.cost>=protectedCash&&(key==="elite"?(state.items.elite||0)===0:key==="recovery"||state.items[key]<2);
       return '<div class="shopcard'+(key==="elite"?' premium-item':'')+'"><div><strong>'+(key==="elite"?'★ 高額・高効果　':'')+esc(item.name)+'</strong><p>'+esc(item.desc)+'</p>'+(state.items[key]?'<span class="pill">'+(key==="elite"?'残り '+state.items[key]+'練習':'保有 '+state.items[key]+'個')+'</span>':'')+(key==="elite"?'<div class="tiny muted">通常練習と遠征費を残せる場合に購入できます。ほかの強化投資との両立は難しくなります。</div>':'')+'</div><button class="btn small secondary" data-action="buy" data-key="'+key+'" '+(available?'':'disabled')+'>'+yen(item.cost)+'</button></div>';
     }).join("");
     const recruitment='<div class="shopcard"><div><strong>来年度のスカウト活動</strong><p>高校生の視察・勧誘。翌年度の新入生の能力が上昇します（年最大3回）。費用は部費から支出。</p><span class="pill">今年度 '+(state.scouting||0)+'/3回</span></div><button class="btn small secondary" data-action="scout" '+((state.race||state.week>=12||(state.scouting||0)>=3||state.cash-180000<480000+(12-state.week)*38000)?"disabled":"")+'>¥180,000</button></div>';
     const invite=state.offer?'<div class="shopcard" style="border-color:#dbb777;background:#2e3230"><div><strong class="accent">★ 抽選で合同合宿に招待！</strong><p>部費¥260,000で次回の選抜5名の成長が2倍。残り期限：第'+state.offer.expires+'週まで。</p></div><button class="btn small" data-action="buy" data-key="invite" '+(state.race||state.week>=12||state.cash-260000<480000+(12-state.week)*38000?"disabled":"")+'>招待を使う</button></div>':'';
-    return panel("部費で購入する支援・備品","自由に使える部費："+yen(usableCash),'<p class="tiny muted">支援効果はゲーム用に誇張していますが、合宿・測定・補給・装備など実在する活動に費用を割り当てています。購入費は全額その年度に記帳します。</p>'+recruitment+invite+shop)
+    return panel("部費で購入する支援・備品","最低練習・遠征を確保：残り"+yen(usableCash),'<p class="tiny muted">通常練習を残り全週続ける場合のアイテム購入余力：'+yen(normalPlanCash)+'。高額プログラムを購入すると他の支出を抑える必要があります。</p><p class="tiny muted">支援効果はゲーム用に誇張していますが、合宿・測定・補給・装備など実在する活動に費用を割り当てています。購入費は全額その年度に記帳します。</p>'+recruitment+invite+shop)
   }
   // No 3D characters: a schematic 2D route with distance-scaled checkpoint markers.
 
