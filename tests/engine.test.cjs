@@ -166,3 +166,49 @@ test("malformed or tampered save data is rejected; v0.1 races can migrate",()=>{
   G.stepRace(original,"steady");
   assert.equal(original.race.segment,1);
 });
+
+
+test("seven rival universities maintain individual 10-player rosters and unique 5-runner lineups",()=>{
+  const s=G.newGame(811);
+  assert.equal(s.rivalTeams.length,7);
+  assert.equal(new Set(s.rivalTeams.map(t=>t.name)).size,7);
+  for(const t of s.rivalTeams){
+    assert.equal(t.roster.length,10);
+    assert.equal(new Set(t.roster.map(r=>r.id)).size,10);
+    assert.equal(t.lineup.length,5);
+    assert.equal(new Set(t.lineup).size,5);
+    assert.equal(t.finance.income-t.finance.expenses,t.cash);
+    for(const id of t.lineup)assert.ok(t.roster.some(r=>r.id===id));
+  }
+  const first=s.rivalTeams[0].roster.map(r=>({id:r.id,grade:r.grade}));
+  for(let i=0;i<12;i++)G.train(s,"stamina","normal");
+  assert.ok(s.rivalTeams.every(t=>t.finance.expenses>2200000));
+  G.startRace(s);
+  for(const c of s.race.contestants.filter(c=>!c.human)){
+    assert.equal(c.runners.length,5);
+    assert.equal(new Set(c.runners.map(x=>x.id)).size,5);
+    assert.ok(c.runners.every(x=>typeof x.name==="string"&&x.name.length>0));
+  }
+  for(let i=0;i<15;i++)G.stepRace(s,"steady");
+  G.closeYear(s);
+  const boss=s.rivalTeams.find(t=>t.boss);
+  assert.equal(boss.roster.length,10);
+  for(const r of first.filter(x=>x.grade===4))assert.ok(!boss.roster.some(x=>x.id===r.id));
+  for(const r of first.filter(x=>x.grade<4))assert.equal(boss.roster.find(x=>x.id===r.id).grade,r.grade+1);
+  assert.ok(boss.lastRank>=1&&boss.lastRank<=8);
+  assert.equal(boss.finance.income-boss.finance.expenses,boss.cash-1584000);
+  G.validate(s);
+});
+test("the CPU league has reproducible long-term turnover, independent racing form and zero network",()=>{
+  const a=G.newGame(712),b=G.newGame(712);
+  for(let y=0;y<3;y++){
+    for(let w=0;w<12;w++){G.train(a,"speed","light");G.train(b,"speed","light");}
+    G.startRace(a);G.startRace(b);
+    for(let i=0;i<15;i++){G.stepRace(a,i%3===2?"push":"save");G.stepRace(b,i%3===2?"push":"save");}
+    G.closeYear(a);G.closeYear(b);
+    assert.deepEqual(a,b);
+  }
+  assert.equal(a.rivalTeams.length,7);
+  assert.ok(a.rivalTeams.every(t=>t.roster.length===10&&t.lastRank!==null));
+  assert.equal(G.financials(a).ending,a.cash);
+});
