@@ -1,0 +1,38 @@
+name: Windows desktop unsigned alpha
+on:
+  push:
+    branches: [feature/ekiden-manager-mvp]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows-portable-and-installer:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install pinned build dependencies
+        run: npm install --no-audit --no-fund
+      - name: Run game engine tests
+        run: npm test
+      - name: Build Windows installer and portable app
+        run: npm run build:win
+      - name: Display binary hashes
+        shell: pwsh
+        run: |
+          Get-ChildItem dist -Filter *.exe | ForEach-Object {
+            $hash = (Get-FileHash -Algorithm SHA256 -Path $_.FullName).Hash
+            Write-Output "$($_.Name) SHA256=$hash"
+          }
+      - name: Upload development build (NOT a signed sales release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekiden-manager-windows-UNSIGNED-alpha
+          path: dist/*.exe
+          if-no-files-found: error
+          retention-days: 14
