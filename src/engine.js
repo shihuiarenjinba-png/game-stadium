@@ -252,10 +252,10 @@ function stepRace(s,stance="steady",water=0){
     const senior=c.legBonus*(c.human?1:0.85);
     // Each cup is a paid pit-stop support package. One cup usually restores hydration;
     // repeated two/three-cup choices cause simulated stomach sloshing and slower pace.
-    const cups=c.human?water:(random(s)<0.86?1:0);
+    const cups=c.human?water:(random(s)<0.35?1:0);
     c.hydration=clamp((c.hydration??62)+cups*24,0,100);
     c.stomach=clamp((c.stomach??0)*0.54+cups*31,0,120);
-    const dehydrationPenalty=Math.max(0,36-c.hydration)*0.40;
+    const dehydrationPenalty=Math.max(0,36-c.hydration)*0.22;
     const stomachPenalty=Math.max(0,c.stomach-65)*0.45+(cups===3?6:0);
     const waterPenalty=dehydrationPenalty+stomachPenalty;
     const randomSegment=normal(s)*2.6;
