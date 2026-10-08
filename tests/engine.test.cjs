@@ -314,3 +314,66 @@ test("premium item works with old save files without elite field and protects sc
  bad.items.elite=99;
  assert.throws(()=>G.validate(bad),/備品/);
 });
+
+test("paid hydration is ledger-audited, optional, capped and keeps a race playable without cash",()=>{
+  const a=G.newGame(225);
+  for(let w=0;w<12;w++)G.train(a,"stamina","normal");
+  G.startRace(a);const opening=a.cash;
+  assert.throws(()=>G.stepRace(a,"steady",4),/0〜3/);
+  assert.throws(()=>G.stepRace(a,"steady",-1),/0〜3/);
+  assert.equal(a.cash,opening);
+  G.stepRace(a,"steady",1);
+  assert.equal(a.cash,opening-G.WATER_COST);
+  assert.equal(a.race.waterSpent,G.WATER_COST);
+  assert.equal(a.race.waterCups,1);
+  assert.equal(a.race.contestants.find(c=>c.human).splits[0].partials[0].waterCups,1);
+  for(let k=1;k<15;k++)G.stepRace(a,"steady",0);
+  assert.equal(a.race.finished,true);
+  assert.equal(a.race.waterSpent,G.WATER_COST);
+  assert.equal(G.financials(a).ending,a.cash);
+  G.validate(a);
+});
+test("under-hydration and drinking too much have different pace penalties",()=>{
+  const s=G.newGame(314);
+  for(let w=0;w<12;w++)G.train(s,"stamina","normal");
+  const totals={};
+  for(const [key,cups] of [["none",0],["sensible",1],["excess",3]]){
+    const t=JSON.parse(JSON.stringify(s));G.startRace(t);
+    for(let i=0;i<15;i++)G.stepRace(t,"steady",cups);
+    totals[key]=t.race.contestants.find(c=>c.human).total;
+    G.validate(t);
+  }
+  assert.ok(totals.sensible<totals.none,"appropriate hydration can reverse a pacing disadvantage");
+  assert.ok(totals.sensible<totals.excess,"excessive drinking leads to stomach sloshing");
+});
+test("life events include both injuries and training breakthroughs, and high-stats romance creates measurable time constraints",()=>{
+  let good=0,bad=0,romance=null,count=0;
+  for(let seed=1;seed<=220;seed++){
+    const s=G.newGame(seed);
+    for(let w=0;w<12;w++){
+      G.train(s,"speed","light");
+      for(const e of (s.events||[]).filter(e=>e.week===s.week)){
+        count++;
+        if([1,3,4,6,7,8].includes(e.type))good++;
+        if([0,2,5].includes(e.type))bad++;
+        if(e.type===0&&!romance&&s.week<12)romance=JSON.parse(JSON.stringify(s));
+      }
+    }
+    G.validate(s);
+  }
+  assert.ok(count>=250&&good>30&&bad>20,"positive and negative events should both be reachable");
+  assert.ok(romance,"romantic schedule conflict should be possible");
+  const runner=romance.roster.find(r=>r.focusLoss>0);assert.ok(runner);
+  const control=JSON.parse(JSON.stringify(romance));
+  control.roster.find(r=>r.id===runner.id).focusLoss=0;
+  const beforeA=runner.stats.speed,beforeB=control.roster.find(r=>r.id===runner.id).stats.speed;
+  G.train(romance,"speed","light");G.train(control,"speed","light");
+  assert.ok((runner.stats.speed-beforeA)<(control.roster.find(r=>r.id===runner.id).stats.speed-beforeB));
+});
+test("old in-progress saves migrate to hydration and event defaults",()=>{
+  const old=G.newGame(884);
+  delete old.events;for(const r of old.roster){delete r.focusLoss;delete r.focusBoost}
+  for(let w=0;w<12;w++)G.train(old,"stamina","light");
+  G.startRace(old);delete old.race.waterSpent;delete old.race.waterCups;
+  G.migrateSave(old);G.validate(old);G.stepRace(old,"steady",0);G.validate(old);
+});
