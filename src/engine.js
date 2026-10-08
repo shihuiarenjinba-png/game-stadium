@@ -85,7 +85,7 @@ function migrateSave(s){
   return s;
 }
 
-function setLineup(s,ids){if(s.race)throw Error("大会開催中は区間配置を変更できません");if(!Array.isArray(ids)||ids.length!==5||new Set(ids.map(Number)).size!==5||ids.some(id=>!s.roster.some(r=>r.id===Number(id))))throw Error("異なる選手を5名選んでください");s.lineup=ids.map(Number);return s}
+function setLineup(s,ids){if(s.prediction&&s.prediction.status==="placed")throw Error("順位予想の購入後は区間配置を変更できません");if(s.race)throw Error("大会開催中は区間配置を変更できません");if(!Array.isArray(ids)||ids.length!==5||new Set(ids.map(Number)).size!==5||ids.some(id=>!s.roster.some(r=>r.id===Number(id))))throw Error("異なる選手を5名選んでください");s.lineup=ids.map(Number);return s}
 
 function buyItem(s,key){if(s.race||s.week>=12)throw Error("大会前の練習期間のみ購入できます");let special=key==="invite";let item=special&&s.offer&&s.week<=s.offer.expires?{name:"特別合同合宿への招待枠",cost:260000}:SHOP[key];if(!item)throw Error("その備品はありません");let stockKey=special?"camp":key;if(key!=="recovery" && s.items[stockKey]>=2)throw Error("同一アイテムの保管上限は2個です");if(s.cash-item.cost<480000+(12-s.week)*38000)throw Error("残りの最低練習費と大会遠征費を確保してください");addMoney(s,-item.cost,"購入費",item.name);if(key==="recovery"){for(const r of s.roster){r.fatigue=clamp(r.fatigue-23,0,100);r.morale=clamp(r.morale+6,0,100);}s.lastLog="栄養・回復支援により疲労を軽減しました。";}else{s.items[stockKey]++;if(special)s.offer=null;s.lastLog=item.name+"を購入しました（次回の対象機会に使用）。";}return s}
 
