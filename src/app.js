@@ -34,8 +34,8 @@
     return panel("選手名鑑","卒業・新入部員あり",'<div class="tablewrap"><table><thead><tr><th>選手</th>'+E.SKILLS.map(k=>'<th class="num">'+skillLabels[k]+'</th>').join("")+'<th>疲労</th><th class="num">士気</th></tr></thead><tbody>'+d+'</tbody></table></div><p class="muted tiny">能力が高くても、当日の調子や終盤の粘り次第で結果は変わります。</p>')
   }
   function lineup(){
-    const rows=E.LEGS.map((leg,i)=>'<div class="line"><div style="min-width:120px"><strong>'+leg.title+'</strong><div class="tiny muted">'+leg.km+'km</div></div><div class="field"><label for="leg-'+i+'">出走選手</label><select id="leg-'+i+'" '+(state.race?"disabled":"")+'>'+state.roster.map(r=>'<option value="'+r.id+'" '+(state.lineup[i]===r.id?"selected":"")+'>'+esc(r.name)+'（'+r.grade+'年・総合'+average(r)+'）</option>').join("")+'</select></div></div>').join("");
-    return panel("区間配置","5区間 / 合計50km",rows+'<div style="margin-top:12px"><button class="btn secondary" data-action="lineup" '+(state.race?"disabled":"")+'>区間配置を確定</button></div>')
+    const rows=E.LEGS.map((leg,i)=>'<div class="line"><div style="min-width:120px"><strong>'+leg.title+'</strong><div class="tiny muted">'+leg.km+'km</div></div><div class="field"><label for="leg-'+i+'">出走選手</label><select id="leg-'+i+'" '+(state.race||state.prediction?"disabled":"")+'>'+state.roster.map(r=>'<option value="'+r.id+'" '+(state.lineup[i]===r.id?"selected":"")+'>'+esc(r.name)+'（'+r.grade+'年・総合'+average(r)+'）</option>').join("")+'</select></div></div>').join("");
+    return panel("区間配置","5区間 / 合計50km",rows+'<div style="margin-top:12px"><button class="btn secondary" data-action="lineup" '+(state.race||state.prediction?"disabled":"")+'>区間配置を確定</button></div>')
   }
   function store(){
     const shop=Object.entries(E.SHOP).map(([key,item])=>'<div class="shopcard"><div><strong>'+esc(item.name)+'</strong><p>'+esc(item.desc)+'</p>'+(state.items[key]?'<span class="pill">保有 '+state.items[key]+'個</span>':'')+'</div><button class="btn small secondary" data-action="buy" data-key="'+key+'" '+((state.race||state.week>=12||state.cash<item.cost)?"disabled":"")+'>'+yen(item.cost)+'</button></div>').join("");
@@ -102,7 +102,7 @@
     if(!P)return "";
     if(state.prediction){
       const b=state.prediction,level=b.status==="placed"?"投票受付終了":b.status==="won"?"的中！":"不的中";
-      const outcome=b.status==="placed"?"大会終了後に順位が確定します":'実際の順位 '+b.actualRank+'位 / 払戻し '+yen(b.payout||0);
+      const outcome=b.status==="placed"?"大会終了後に順位が確定します（購入後の区間配置は固定）":'実際の順位 '+b.actualRank+'位 / 払戻し '+yen(b.payout||0);
       return panel("レース順位予想・投票券",level,'<div class="ticket"><div class="eyebrow">VIRTUAL PREDICTION</div><div class="ticket-title">'+esc(b.team)+'　'+b.rank+'位</div><div class="line"><span>確定オッズ <strong>×'+b.odds.toFixed(1)+'</strong></span><span>部費支出 '+yen(b.stake)+'</span></div><div class="line"><span>想定的中確率 '+b.probability+'%</span><span class="'+(b.status==="won"?"green":"accent")+'">'+level+'</span></div><p class="tiny">'+outcome+'</p></div><div class="mini muted">現実のお金・換金・景品・オンライン賭博は一切ありません。ゲーム内予測イベントです。</div>');
     }
     if(state.week!==12||state.race||state.ending)return panel("順位予想ボード","育成12週が終了すると解禁","<p class='tiny muted'>大会前に、選手の能力から推定した倍率を見て、部費で順位を予想できます。ゲーム内専用・換金不可。</p>");
