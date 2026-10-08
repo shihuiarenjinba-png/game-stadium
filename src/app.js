@@ -9,8 +9,9 @@
   const skillLabels={speed:"スピード",stamina:"スタミナ",hill:"登坂",grit:"精神力",recovery:"回復力"};
   const esc=x=>String(x??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
   const average=r=>Math.round((r.stats.speed+r.stats.stamina+r.stats.hill+r.stats.grit)/4);
+  const seed=()=>{const n=new Uint32Array(1);if(globalThis.crypto?.getRandomValues){globalThis.crypto.getRandomValues(n);return n[0]||1;}return (Date.now()>>>0)||1;};
   let state=load(), flash="";
-  function load(){try{const raw=localStorage.getItem(KEY);if(raw){const s=E.migrateSave(JSON.parse(raw));return s;}}catch(e){console.warn("セーブデータの読み込みに失敗:",e.message)}return E.newGame()}
+  function load(){try{const raw=localStorage.getItem(KEY);if(raw){const s=E.migrateSave(JSON.parse(raw));return s;}}catch(e){console.warn("セーブデータの読み込みに失敗:",e.message)}return E.newGame(seed())}
   function persist(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){flash="自動保存できませんでした。下の「セーブ書き出し」を使用してください。";}}
   function panel(title,sub,body){return '<section class="panel"><header class="panelhead"><h2>'+title+'</h2><span class="tiny muted">'+sub+'</span></header><div class="panelbody">'+body+'</div></section>'}
   function statsCards(){
@@ -60,7 +61,14 @@
   function standing(){
     if(!state.race)return "";
     const race=state.race,sorted=race.contestants;
-    return courseMap()+'<div class="track">'+E.LEGS.map((leg,i)=>'<div class="seg '+(i<race.leg?"done":i===race.leg?"now":"")+'">'+(i+1)+'区<small>'+leg.km+'km</small></div>').join("")+'</div>'+
+    const human=race.contestants.find(c=>c.human);
+    const currentName=human?.splits?.at(-1)?.runner||state.roster.find(r=>r.id===state.lineup[race.leg])?.name||"第1区の走者";
+    const energy=Number.isFinite(human?.energy)?Math.round(human.energy):null;
+    const energyWidget='<div class="energy-card"><div class="line"><strong>体力・ペース配分</strong><span class="tiny muted">'+esc(currentName)+'</span></div>'+(
+      energy===null?'<div class="tiny muted">大会開始。ペース指示後に走者の体力が表示されます。</div>':
+      '<div class="bar" style="height:12px"><div class="fill '+(energy<35?"warn":"")+'" style="width:'+energy+'%"></div></div><div class="tiny muted" style="margin-top:6px">残存体力：'+energy+'/100　・次の区間で走者が交代します。</div>'
+    )+'</div>';
+    return energyWidget+courseMap()+'<div class="track">'+E.LEGS.map((leg,i)=>'<div class="seg '+(i<race.leg?"done":i===race.leg?"now":"")+'">'+(i+1)+'区<small>'+leg.km+'km</small></div>').join("")+'</div>'+
       '<div class="loglist">'+sorted.map((c,i)=>'<div class="ranking"><div class="ranknum">'+(i+1)+'</div><div class="'+(c.human?"green strong":c.boss?"accent strong":"")+'">'+esc(c.name)+(c.boss?" ★強豪":"")+'</div><div class="ranktime">'+time(c.total)+(i?(' / +'+time(c.total-sorted[0].total)):' / 先頭')+'</div></div>').join("")+'</div>'+
       (race.notes.length?'<div class="divider"></div><div class="tiny muted">'+race.notes.slice(-3).reverse().map(x=>esc(x.leg+'区：'+x.text)).join('<div style="margin-top:5px"></div>')+'</div>':"");
   }
@@ -98,7 +106,7 @@
     const action=button.dataset.action;
     if(action==="export"){exportSave();return;}
     if(action==="import"){document.getElementById("savefile").click();return;}
-    if(action==="reset"){if(confirm("今の進行状況を消し、初年度から始めますか？ セーブ書き出しを推奨します。")){state=E.newGame();persist();render();}return;}
+    if(action==="reset"){if(confirm("今の進行状況を消し、初年度から始めますか？ セーブ書き出しを推奨します。")){state=E.newGame(seed());persist();render();}return;}
     execute(()=>{
       if(action==="train")E.train(state,document.getElementById("focus").value,document.getElementById("intensity").value);
       else if(action==="buy")E.buyItem(state,button.dataset.key);
