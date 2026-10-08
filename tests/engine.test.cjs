@@ -55,6 +55,7 @@ test("budget reserve prevents overspending the remaining minimum practices and t
   const s=G.newGame(3);
   for(let k=0;k<2;k++)G.buyItem(s,"camp");
   for(let k=0;k<2;k++)G.buyItem(s,"science");
+  G.buyItem(s,"recovery");
   assert.throws(()=>G.buyItem(s,"rain"),/最低練習費/);
   for(let i=0;i<12;i++)G.train(s,"stamina","light");
   assert.ok(s.cash>=480000);
