@@ -15,7 +15,7 @@
   function panel(title,sub,body){return '<section class="panel"><header class="panelhead"><h2>'+title+'</h2><span class="tiny muted">'+sub+'</span></header><div class="panelbody">'+body+'</div></section>'}
   function statsCards(){
     const avg=Math.round(state.roster.reduce((a,b)=>a+average(b),0)/state.roster.length);
-    const amount=state.race?("第"+Math.min(5,state.race.leg+1)+"区"):(state.week>=12?"大会直前":"練習中");
+    const amount=state.race?(state.race.finished?"完走":("第"+Math.min(5,state.race.leg+1)+"区 "+((state.race.segment||0)+1)+"/3")):(state.week>=12?"大会直前":"練習中");
     return '<div class="statgrid">'+[
       ["シーズン",state.year+"年目",state.week+"/12週 "+amount],
       ["部費残高",yen(state.cash),"収支は年次決算で確認"],
@@ -41,10 +41,25 @@
     const invite=state.offer?'<div class="shopcard" style="border-color:#dbb777;background:#2e3230"><div><strong class="accent">★ 抽選で合同合宿に招待！</strong><p>部費¥260,000で次回の選抜5名の成長が2倍。残り期限：第'+state.offer.expires+'週まで。</p></div><button class="btn small" data-action="buy" data-key="invite" '+(state.race||state.week>=12||state.cash-260000<480000+(12-state.week)*38000?"disabled":"")+'>招待を使う</button></div>':'';
     return panel("部費で購入する支援・備品","魔法アイテムなし",'<p class="tiny muted">支援効果はゲーム用に誇張していますが、合宿・測定・補給・装備など実在する活動に費用を割り当てています。購入費は全額その年度に記帳します。</p>'+invite+shop)
   }
+  // No 3D characters: a schematic 2D route with distance-scaled checkpoint markers.
+  function courseMap(){
+    const race=state.race;if(!race)return "";
+    const kmFinished=E.LEGS.slice(0,race.leg).reduce((n,x)=>n+x.km,0)+(race.leg<5?E.LEGS[race.leg].km*(race.segment||0)/3:0);
+    const points=[[19,107],[75,51],[129,82],[182,28],[233,92],[278,48],[321,39]];
+    const pos=f=>{let t=Math.min(.999999,Math.max(0,f))*(points.length-1),i=Math.floor(t),a=t-i;return [points[i][0]*(1-a)+points[i+1][0]*a,points[i][1]*(1-a)+points[i+1][1]*a]};
+    const leader=race.contestants.length?Math.min(...race.contestants.map(c=>c.total)):0;
+    const dots=race.contestants.map((c,i)=>{
+      const last=c.splits.at(-1),secKm=last?.pace>0?last.pace:216;
+      const distance=Math.max(0,kmFinished-Math.max(0,c.total-leader)/secKm),[x,y]=pos(distance/50);
+      const fill=c.human?"#e7c076":c.boss?"#db786f":(["#8accc4","#8ab1d5","#a6a5db","#e8a4b1","#88bf9d","#bfcab5"][i%6]);
+      const jitter=(i-3)*1.7;return '<g><circle cx="'+(x+jitter).toFixed(1)+'" cy="'+(y+jitter).toFixed(1)+'" r="'+(c.human?8:5.6)+'" fill="'+fill+'" stroke="#10222d" stroke-width="2"><title>'+esc(c.name)+'・'+(i+1)+'位</title></circle>'+(c.human?'<circle cx="'+(x+jitter)+'" cy="'+(y+jitter)+'" r="11" fill="none" stroke="#f7e7b6" stroke-width="1.5"/>':'')+'</g>'}).join("");
+    const course=points.map(p=>p.join(",")).join(" ");
+    return '<div class="course" role="img" aria-label="各大学の走行位置を示す2Dコース図"><svg viewBox="0 0 340 128" width="100%" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="338" height="126" rx="11" fill="#233b3c"/><polyline points="'+course+'" fill="none" stroke="#516b63" stroke-width="20" stroke-linejoin="round" stroke-linecap="round"/><polyline points="'+course+'" fill="none" stroke="#dfcfa8" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><polyline points="'+course+'" fill="none" stroke="#fff3d8" stroke-width="1.5" stroke-dasharray="2 5"/><text x="16" y="122" fill="#e4e8df" font-size="10">START</text><text x="278" y="20" fill="#e4e8df" font-size="10">FINISH</text>'+dots+'</svg></div><div class="line tiny"><span class="muted">進行距離 '+kmFinished.toFixed(1)+' / 50km</span><span><span class="accent">●</span> 自校　<span style="color:#db786f">●</span> 北稜</span></div>';
+  }
   function standing(){
     if(!state.race)return "";
     const race=state.race,sorted=race.contestants;
-    return '<div class="track">'+E.LEGS.map((leg,i)=>'<div class="seg '+(i<race.leg?"done":i===race.leg?"now":"")+'">'+(i+1)+'区<small>'+leg.km+'km</small></div>').join("")+'</div>'+
+    return courseMap()+'<div class="track">'+E.LEGS.map((leg,i)=>'<div class="seg '+(i<race.leg?"done":i===race.leg?"now":"")+'">'+(i+1)+'区<small>'+leg.km+'km</small></div>').join("")+'</div>'+
       '<div class="loglist">'+sorted.map((c,i)=>'<div class="ranking"><div class="ranknum">'+(i+1)+'</div><div class="'+(c.human?"green strong":c.boss?"accent strong":"")+'">'+esc(c.name)+(c.boss?" ★強豪":"")+'</div><div class="ranktime">'+time(c.total)+(i?(' / +'+time(c.total-sorted[0].total)):' / 先頭')+'</div></div>').join("")+'</div>'+
       (race.notes.length?'<div class="divider"></div><div class="tiny muted">'+race.notes.slice(-3).reverse().map(x=>esc(x.leg+'区：'+x.text)).join('<div style="margin-top:5px"></div>')+'</div>':"");
   }
@@ -55,7 +70,7 @@
     }
     const r=state.race;
     const info='<div class="flex"><span class="pill">'+r.weather+'</span><span class="pill">'+(r.finished?"全区間終了":'次は'+E.LEGS[r.leg].title)+'</span><span class="pill">'+(r.rank===null?'スタート前':'現在 '+r.rank+' 位')+'</span></div>';
-    const choice=r.finished?'<div class="notice"><strong>'+r.rank+'位でゴール！</strong><br>'+(r.rank===1?'全国優勝です！強豪校の連覇を阻止しました。':'大学の年間記録を確認し、翌シーズンで挑みましょう。')+'</div><button class="btn" data-action="close">年度決算を確定して次年度へ →</button>':'<div class="controlrow"><div class="field"><label for="strategy">次区間の指示</label><select id="strategy"><option value="save">体力温存</option><option value="steady" selected>標準ペース</option><option value="push">積極策・攻め</option></select></div><button class="btn" data-action="next">次の区間を走る →</button></div><p class="muted tiny">「攻め」は体力があると速く、持久力が不足すると大幅に失速します。</p>';
+    const choice=r.finished?'<div class="notice"><strong>'+r.rank+'位でゴール！</strong><br>'+(r.rank===1?'全国優勝です！強豪校の連覇を阻止しました。':'大学の年間記録を確認し、翌シーズンで挑みましょう。')+'</div><button class="btn" data-action="close">年度決算を確定して次年度へ →</button>':'<div class="controlrow"><div class="field"><label for="strategy">次チェックポイントの指示</label><select id="strategy"><option value="save">体力温存</option><option value="steady" selected>標準ペース</option><option value="push">積極策・攻め</option></select></div><button class="btn" data-action="next">次の地点へ →</button><button class="btn secondary" data-action="skip">区間終了まで進む</button></div><p class="muted tiny">各区間を3分割（全15地点）。攻めは体力消費32、標準21、温存13。使い切ると終盤に失速します。</p>';
     return panel("全国大学駅伝","レース進行中",info+standing()+'<div class="divider"></div>'+choice)
   }
   function finance(){
@@ -88,7 +103,8 @@
       else if(action==="buy")E.buyItem(state,button.dataset.key);
       else if(action==="lineup")E.setLineup(state,E.LEGS.map((_,i)=>Number(document.getElementById("leg-"+i).value)));
       else if(action==="start")E.startRace(state);
-      else if(action==="next")E.nextLeg(state,document.getElementById("strategy").value);
+      else if(action==="next")E.stepRace(state,document.getElementById("strategy").value);
+      else if(action==="skip")E.nextLeg(state,document.getElementById("strategy").value);
       else if(action==="close")E.closeYear(state);
     });
   });
