@@ -54,6 +54,18 @@ async function run(){
   assert.match(await query("document.body.innerText"),/2年目/);
   assert.match(await query("document.body.innerText"),/歴代成績・年度決算/);
   await screenshot("04-year-two");
+  // Responsive and zoom smoke: this is not a substitute for a human DPI review.
+  win.setSize(900,700);
+  await screenshot("05-compact");
+  let dimensions=await query("({viewport:window.innerWidth,content:document.documentElement.scrollWidth})");
+  assert.ok(dimensions.content<=dimensions.viewport+8,"no horizontal page overflow at compact width: "+JSON.stringify(dimensions));
+  win.webContents.setZoomFactor(1.25);
+  await screenshot("06-zoom125");
+  dimensions=await query("({viewport:window.innerWidth,content:document.documentElement.scrollWidth})");
+  assert.ok(dimensions.content<=dimensions.viewport+8,"no horizontal overflow at 125% zoom: "+JSON.stringify(dimensions));
+  win.webContents.setZoomFactor(1);
+  win.setSize(1500,900);
+  await screenshot("07-wide");
   console.log("WINDOWS UI SMOKE PASS: training, scouting, 15 checkpoints, end-of-year rollover, screenshots");
 }
 app.whenReady().then(run).then(()=>{if(win)win.close();app.quit();}).catch(error=>{console.error("WINDOWS UI SMOKE FAIL",error);app.exit(1);});
