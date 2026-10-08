@@ -48,6 +48,7 @@ test("training, scouting, checkpoint map, year-end accounting, and autosave run 
   app.click("prediction");
   assert.equal(app.state.prediction.status,"placed");
   assert.equal(app.state.prediction.stake,50000);
+  assert.match(app.markup,/id="leg-0" disabled/,"purchased rank ticket freezes the lineup editor");
   app.click("start");
   assert.match(app.markup,/スタート前/);
   assert.match(app.markup,/class="course"/);
