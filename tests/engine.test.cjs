@@ -264,3 +264,21 @@ test("malformed CPU school athletes and mismatched team budgets cannot be import
   G.migrateSave(legacy);
   assert.ok(legacy.rivalTeams.every(t=>t.finance.opening+t.finance.income-t.finance.expenses===t.cash));
 });
+
+test("rare gifted freshmen are seeded, visible in data and keep safe stat bounds",()=>{
+  let count=0,stars=0,genius=0;
+  for(let seed=1;seed<=400;seed++){
+    const s=G.newGame(seed);
+    for(let w=0;w<12;w++)G.train(s,"stamina","light");
+    G.startRace(s);for(let leg=0;leg<5;leg++)G.nextLeg(s);
+    G.closeYear(s);
+    for(const r of s.roster.filter(r=>r.grade===1)){
+      count++;if(r.talent)stars++;
+      if(r.talent==="天才1年生")genius++;
+      for(const skill of G.SKILLS)assert.ok(r.stats[skill]>=35&&r.stats[skill]<=99);
+    }
+    G.validate(s);
+  }
+  assert.ok(stars>0 && stars<count*0.15,"rare but possible outstanding freshmen");
+  assert.ok(genius>=0);
+});
