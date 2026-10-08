@@ -20,6 +20,16 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Run game engine tests
         run: npm test
+      - name: Real Windows Electron UI smoke with screenshot verification
+        run: npm run test:desktop
+      - name: Upload visual QA snapshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekiden-manager-windows-ui-screenshots
+          path: smoke-output/*.png
+          if-no-files-found: warn
+          retention-days: 14
       - name: Build Windows installer and portable app
         run: npm run build:win
       - name: Display binary hashes
