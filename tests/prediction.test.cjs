@@ -107,10 +107,9 @@ test("even favorite placement at 1.0x cannot generate positive net gain",()=>{
  }
  assert.ok(found,"some extreme favorites should be priced at 1.0x");
  const {s,mark}=found;
- const original=s.cash;
  P.place(s,mark.team,mark.rank,20000);
  race(s);
- const net=s.cash-original+480000; // exclude fixed race trip expense
- assert.ok(net<=0,"a 1.0x favorite can at best return the stake");
+ const ticketNet=s.prediction.payout-s.prediction.stake;
+ assert.ok(ticketNet<=0,"a 1.0x favorite can at best return the stake");
  G.validate(s);
 });
