@@ -92,7 +92,7 @@ name:t.name,boss:t.boss,base:t.base,total:0,splits:[],runners:t.lineup.map(id=>{
 const CPU_SURNAMES=["神谷","桐生","宮城","坂本","小田","真栄田","藤田","城間","新垣","宮里","西田","川上","村上","比嘉","金城","藤井","岡本","平良"];
 const CPU_GIVEN=["隼人","匠","悠斗","蓮","大翔","陸斗","航","凛太郎","葵","樹","蒼","拓海"];
 function makeRivalAthlete(s,team,grade,id){
-  const level=team.base-5+(grade-1)*0.65+Math.min(2,(s.year-1)*0.3)+normal(s)*2;
+  const level=team.base-7+(grade-1)*0.65+Math.min(2,(s.year-1)*0.3)+normal(s)*2;
   const stats={};
   for(const key of SKILLS)stats[key]=Math.round(clamp(level+between(s,-3.6,3.6),35,99)*10)/10;
   if(team.style==="hill")stats.hill=Math.min(99,stats.hill+2);
