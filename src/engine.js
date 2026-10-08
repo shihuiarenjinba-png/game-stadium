@@ -40,6 +40,18 @@ function validate(s){
     balance+=row.amount;
   }
   if(!Number.isSafeInteger(balance)||balance!==s.cash)throw Error("セーブデータの部費残高が台帳と一致しません");
+  if(s.ending!==undefined&&s.ending!==null&&!["won","lost"].includes(s.ending))throw Error("ゲーム終了状態が不正です");
+  if(s.prediction!==undefined&&s.prediction!==null){
+    const p=s.prediction;
+    if(!p||typeof p!=="object"||!["placed","won","lost"].includes(p.status)||
+       !Number.isInteger(p.year)||p.year<1||p.year>s.year||
+       !RIVALS.some(t=>t.name===p.team)&&p.team!=="あなたの大学"||
+       !Number.isInteger(p.rank)||p.rank<1||p.rank>8||
+       !Number.isSafeInteger(p.stake)||p.stake<20000||p.stake>400000||p.stake%10000!==0||
+       !Number.isFinite(p.odds)||p.odds<1.1||p.odds>16||
+       !Number.isSafeInteger(p.payout)||p.payout<0||p.payout>6400000)
+       throw Error("順位予想データが不正です");
+  }
   if("alumni" in s && (!Array.isArray(s.alumni)||s.alumni.length>10000))throw Error("卒業生データが不正です");
   if("scouting" in s && (!Number.isInteger(s.scouting)||s.scouting<0||s.scouting>3))throw Error("スカウト投資が不正です");
   if(!s.items||!["camp","science","recovery","rain"].every(k=>Number.isInteger(s.items[k])&&s.items[k]>=0&&s.items[k]<=100))throw Error("備品の保有データが不正です");
