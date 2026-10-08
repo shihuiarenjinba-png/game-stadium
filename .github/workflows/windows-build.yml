@@ -32,10 +32,19 @@ jobs:
           retention-days: 14
       - name: Build Windows installer and portable app
         run: npm run build:win
-      - name: Display binary hashes
+      - name: Verify BOTH installer and portable are present and hash them
         shell: pwsh
         run: |
-          Get-ChildItem dist -Filter *.exe | ForEach-Object {
+          $installers = @(Get-ChildItem dist -Filter 'EKIDEN-MANAGER-Setup-*.exe')
+          $portables  = @(Get-ChildItem dist -Filter 'EKIDEN-MANAGER-Portable-*.exe')
+          if ($installers.Count -ne 1 -or $portables.Count -ne 1) {
+            throw "Expected one Setup EXE and one Portable EXE. Found setup=$($installers.Count), portable=$($portables.Count)"
+          }
+          $executables = @(Get-ChildItem dist -Filter '*.exe')
+          if ($executables.Count -ne 2) {
+            throw "Expected exactly two Windows EXEs, found $($executables.Count)"
+          }
+          $executables | ForEach-Object {
             $hash = (Get-FileHash -Algorithm SHA256 -Path $_.FullName).Hash
             Write-Output "$($_.Name) SHA256=$hash"
           }
