@@ -282,3 +282,35 @@ test("rare gifted freshmen are seeded, visible in data and keep safe stat bounds
   assert.ok(stars>0 && stars<count*0.15,"rare but possible outstanding freshmen");
   assert.ok(genius>=0);
 });
+
+test("premium 780k item is barely affordable while honoring reserved training and 480k race trip",()=>{
+ const a=G.newGame(905),b=G.newGame(905);
+ assert.equal(G.SHOP.elite.cost,780000);
+ assert.equal(a.cash,2400000);
+ G.buyItem(a,"elite");
+ assert.equal(a.items.elite,3);
+ assert.equal(a.cash,1620000);
+ assert.equal(G.financials(a).ending,a.cash);
+ assert.throws(()=>G.buyItem(a,"elite"),/使い切ってから/);
+ const athlete=a.roster.find(r=>r.id===a.lineup[0]),other=b.roster.find(r=>r.id===b.lineup[0]);
+ const initialA=athlete.stats.stamina,initialB=other.stats.stamina;
+ for(let w=0;w<3;w++){G.train(a,"stamina","normal");G.train(b,"stamina","normal");}
+ assert.equal(a.items.elite,0);
+ assert.ok(athlete.stats.stamina-initialA>other.stats.stamina-initialB);
+ for(let w=3;w<12;w++)G.train(a,"stamina","normal");
+ assert.equal(a.week,12);assert.ok(a.cash>=480000);
+ G.startRace(a);
+ for(let i=0;i<5;i++)G.nextLeg(a);
+ G.validate(a);
+ assert.equal(G.financials(a).ending,a.cash);
+});
+test("premium item works with old save files without elite field and protects schema boundaries",()=>{
+ const s=G.newGame(301),older=JSON.parse(JSON.stringify(s));
+ delete older.items.elite;
+ G.validate(older);
+ G.migrateSave(older);
+ assert.equal(older.items.elite,0);
+ const bad=JSON.parse(JSON.stringify(s));
+ bad.items.elite=99;
+ assert.throws(()=>G.validate(bad),/備品/);
+});
