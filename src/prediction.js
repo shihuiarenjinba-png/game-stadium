@@ -53,7 +53,7 @@
       clone.prediction=null;
       G.startRace(clone);
       if((clone.race.weather==="雨")!==(sample.weather==="rain"))throw Error("シナリオの天候が不整合です");
-      for(let step=0;step<15;step++)G.stepRace(clone,step%3===0?"save":step%3===1?"steady":"push");
+      for(let step=0;step<15;step++)G.stepRace(clone,step%3===0?"save":step%3===1?"steady":"push",clone.cash>=G.WATER_COST?1:0);
       clone.race.contestants.forEach((c,rank)=>counts[c.name][rank]++);
     }
     return counts;
@@ -89,7 +89,7 @@
     }));
     cachedSignature=key;cachedQuotes=data;
     cachedMeta={samples:SAMPLES,rain:RAIN_SAMPLES,dry:SAMPLES-RAIN_SAMPLES,
-      policy:"区間前半は温存・中盤は標準・終盤は攻め",method:"同じレースエンジンで512通り試算（晴384・雨128）"};
+      policy:"区間前半は温存・中盤は標準・終盤は攻め。給水は各地点1杯（予算不足時は0杯）",method:"同じレースエンジンで512通り試算（晴384・雨128）"};
     return data;
   }
   function meta(s){
