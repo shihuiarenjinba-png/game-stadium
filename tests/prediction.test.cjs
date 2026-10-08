@@ -10,9 +10,17 @@ test("odds depend on runner skills, enumerate eight universities and eight finis
  const s=prepare(52),rng=s.rng,quotes=P.quotes(s);
  assert.equal(quotes.length,8);
  assert.equal(new Set(quotes.map(q=>q.name)).size,8);
- assert.ok(quotes.every(q=>q.ranks.length===8&&q.ranks.every(r=>r.odds>=1.1&&r.odds<=16&&r.probability>=0)));
+ assert.ok(quotes.every(q=>q.ranks.length===8&&q.ranks.every(r=>r.odds>=1&&r.odds<=16&&r.probability>=0&&r.probability<=100&&r.sampleWins>=0&&r.sampleWins<=512&&r.range.length===2)));
  assert.equal(s.rng,rng);
  assert.deepEqual(quotes,P.quotes(s));
+ assert.equal(P.SCENARIO_COUNT,512);
+ assert.deepEqual(P.meta(s).samples,512);
+ assert.equal(P.meta(s).rain,128);
+ assert.equal(P.meta(s).dry,384);
+ assert.equal(P.quotes(s),quotes,"same inputs reuse cached market, not 512 new simulations");
+ assert.ok(quotes.every(q=>q.ranks.reduce((n,r)=>n+r.sampleWins,0)===512));
+ assert.ok(quotes.every(q=>Math.abs(q.ranks.reduce((n,r)=>n+r.probability,0)-100)<=0.4));
+ assert.ok(quotes.every(q=>q.ranks.every(r=>r.odds>=1&&r.odds<=16)));
  assert.ok(quotes.find(q=>q.name==="北稜大学").strength>quotes.find(q=>q.name==="あなたの大学").strength);
 });
 test("prediction stakes are debited and win/loss settles at actual rank without moving the result RNG",()=>{
@@ -63,4 +71,46 @@ test("deadline after eighth season with no championship is a game over, and earl
  }
  assert.ok(over>0);
  assert.ok(over+clear===25);
+});
+
+test("scenario bank re-prices when lineup or training differs, preserving underlying saved RNG",()=>{
+ const a=prepare(712);
+ const initial=P.quotes(a), before=a.rng;
+ assert.equal(initial.length,8);
+ assert.equal(before,a.rng);
+ const swapped=[...a.lineup];
+ const outsider=a.roster.find(r=>!swapped.includes(r.id));
+ swapped[4]=outsider.id;
+ G.setLineup(a,swapped);
+ const changed=P.quotes(a);
+ assert.notEqual(changed,initial,"different lineup invalidates odds cache");
+ assert.equal(a.rng,before,"pricing must not alter actual race noise");
+ assert.deepEqual(changed,P.quotes(a),"same lineup caches");
+});
+test("virtual forecast outcomes are never affected by betting or not betting",()=>{
+ for(let seed=41;seed<=48;seed++){
+   const noBet=prepare(seed),bet=JSON.parse(JSON.stringify(noBet));
+   P.place(bet,"北稜大学",1,30000);
+   assert.equal(bet.cash,noBet.cash-30000);
+   race(noBet);race(bet);
+   assert.deepEqual(bet.race.contestants.map(c=>[c.name,c.total]),noBet.race.contestants.map(c=>[c.name,c.total]));
+   assert.equal(G.financials(bet).ending,bet.cash);
+ }
+});
+test("even favorite placement at 1.0x cannot generate positive net gain",()=>{
+ let found=null;
+ for(let seed=1;seed<=16&&!found;seed++){
+   const s=prepare(seed);
+   const q=P.quotes(s);
+   const mark=q.flatMap(t=>t.ranks.map(r=>({team:t.name,rank:r.rank,odds:r.odds}))).find(x=>x.odds===1);
+   if(mark)found={s,mark};
+ }
+ assert.ok(found,"some extreme favorites should be priced at 1.0x");
+ const {s,mark}=found;
+ const original=s.cash;
+ P.place(s,mark.team,mark.rank,20000);
+ race(s);
+ const net=s.cash-original+480000; // exclude fixed race trip expense
+ assert.ok(net<=0,"a 1.0x favorite can at best return the stake");
+ G.validate(s);
 });
