@@ -46,13 +46,16 @@ async function run(){
   const predictionStatus=await query("JSON.parse(localStorage.getItem('ekiden-manager-v1')).prediction.status");
   assert.equal(predictionStatus,"placed");
   await click("start");
+  assert.match(await query("document.body.innerText"),/給水ステーション/);
   assert.equal(await query("document.querySelectorAll('.course circle').length")>=8,true);
   for(let i=0;i<6;i++)await click("next");
+  assert.equal(await query("JSON.parse(localStorage.getItem(\'ekiden-manager-v1\')).race.waterSpent"),6*12000);
   const stage=await query("JSON.parse(localStorage.getItem('ekiden-manager-v1')).race");
   assert.equal(stage.leg,2);
   assert.equal(stage.segment,0);
   await screenshot("02-race");
   for(let i=6;i<15;i++)await click("next");
+  assert.equal(await query("JSON.parse(localStorage.getItem(\'ekiden-manager-v1\')).race.waterCups"),15);
   assert.match(await query("document.body.innerText"),/大会終了/);
   const payoutStatus=await query("JSON.parse(localStorage.getItem('ekiden-manager-v1')).prediction.status");
   assert.ok(["won","lost"].includes(payoutStatus));
