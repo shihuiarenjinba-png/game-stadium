@@ -30,7 +30,7 @@
     return panel("週間トレーニング","年間12週を圧縮したシーズン","<p class='muted tiny'>選んだ能力を10名全員が鍛えます。出走予定の5名は合宿・測定の特別効果を受けます。疲労が高いと練習効率が低下します。</p><div class='controlrow'><div class='field'><label for='focus'>育成項目</label><select id='focus'>"+selects+"</select></div><div class='field'><label for='intensity'>練習強度</label><select id='intensity'><option value='light'>調整練習（¥38,000）</option><option value='normal' selected>通常練習（¥72,000）</option><option value='hard'>高強度（¥110,000）</option></select></div><button class='btn' data-action='train' "+(disabled?"disabled":"")+">次の週へ進む →</button></div><div class='divider'></div><div class='flex'><span class='pill'>"+state.week+" / 12週</span><span class='muted tiny'>3D表示・通信なし / セーブ対応</span></div>")
   }
   function runners(){
-    const d=state.roster.map(r=>'<tr><td><strong>'+esc(r.name)+'</strong><div class="mini muted">'+r.grade+'年生'+(r.grade===4?'・最終学年':'')+'</div></td>'+E.SKILLS.map(k=>'<td class="num">'+dec(r.stats[k])+'</td>').join("")+'<td><div class="bar"><div class="fill '+(r.fatigue>=55?'warn':'')+'" style="width:'+Math.round(r.fatigue)+'%"></div></div><span class="mini muted">'+Math.round(r.fatigue)+'/100</span></td><td class="num">'+Math.round(r.morale)+'</td></tr>').join("");
+    const d=state.roster.map(r=>'<tr><td><strong>'+esc(r.name)+'</strong><div class="mini muted">'+r.grade+'年生'+(r.grade===4?'・最終学年':'')+'</div><div class="mini green">PB: '+(Object.entries(r.records||{}).sort((a,b)=>Number(a[0])-Number(b[0])).map(([km,seconds])=>km+'km '+time(seconds)).join(' / ')||'未記録')+'</div></td>'+E.SKILLS.map(k=>'<td class="num">'+dec(r.stats[k])+'</td>').join("")+'<td><div class="bar"><div class="fill '+(r.fatigue>=55?'warn':'')+'" style="width:'+Math.round(r.fatigue)+'%"></div></div><span class="mini muted">'+Math.round(r.fatigue)+'/100</span></td><td class="num">'+Math.round(r.morale)+'</td></tr>').join("");
     return panel("選手名鑑","卒業・新入部員あり",'<div class="tablewrap"><table><thead><tr><th>選手</th>'+E.SKILLS.map(k=>'<th class="num">'+skillLabels[k]+'</th>').join("")+'<th>疲労</th><th class="num">士気</th></tr></thead><tbody>'+d+'</tbody></table></div><p class="muted tiny">能力が高くても、当日の調子や終盤の粘り次第で結果は変わります。</p>')
   }
   function lineup(){
@@ -94,8 +94,14 @@
   function history(){
     if(!state.history.length)return panel("歴代成績","周回するほど強くなる","<p class='muted tiny'>シーズン終了後、最終順位と年度決算がここに残ります。4年生は卒業し、新入部員が加入します。</p>");
     const rows=[...state.history].reverse().map(h=>'<tr><td>'+h.year+'年目</td><td class="num '+(h.rank===1?"green":"")+'">'+h.rank+'位</td><td>'+esc(h.winner)+'</td><td class="num">'+yen(h.finance.income)+'</td><td class="num">'+yen(h.finance.expenses)+'</td><td class="num">'+yen(h.finance.net)+'</td><td class="num">'+yen(h.finance.ending)+'</td></tr>').join("");
+
+    const standings=[...state.history].reverse().filter(h=>Array.isArray(h.standings)).map(h=>{
+      const rows=h.standings.map(c=>'<tr><td class="num">'+c.rank+'</td><td>'+esc(c.name)+'</td><td class="num">'+time(c.seconds)+'</td></tr>').join("");
+      return '<details class="collapse"><summary class="tiny">'+h.year+'年目の全国駅伝・最終順位（8大学）</summary><div class="tablewrap"><table><thead><tr><th class="num">順位</th><th>大学名</th><th class="num">総合タイム</th></tr></thead><tbody>'+rows+'</tbody></table></div></details>';
+    }).join("");
+    const alumni=Array.isArray(state.alumni)&&state.alumni.length?'<details class="collapse"><summary class="tiny">卒業生の記録（'+state.alumni.length+'名）</summary><div class="tablewrap"><table><thead><tr><th>卒業生</th><th>卒業年度</th><th>記録</th></tr></thead><tbody>'+[...state.alumni].reverse().map(r=>'<tr><td>'+esc(r.name)+'</td><td>'+r.graduationYear+'年目</td><td>'+Object.entries(r.records||{}).map(([k,v])=>k+'km '+time(v)).join(' / ')+'</td></tr>').join('')+'</tbody></table></div></details>':'';
     const reports=[...state.history].reverse().map(h=>{const f=E.financials(state,h.year);return '<details class="collapse"><summary class="tiny">'+h.year+'年目の決算明細（'+f.entries.length+'件）</summary><div class="ledger"><table><thead><tr><th>週</th><th>費目</th><th>内容</th><th class="num">金額</th></tr></thead><tbody>'+f.entries.map(x=>'<tr><td>'+x.week+'</td><td>'+esc(x.kind)+'</td><td>'+esc(x.label)+'</td><td class="num">'+yen(x.amount)+'</td></tr>').join("")+'</tbody></table></div></details>'}).join("");
-    return panel("歴代成績・年度決算","全年度の明細を保存",'<div class="tablewrap"><table><thead><tr><th>年</th><th class="num">順位</th><th>優勝校</th><th class="num">収入</th><th class="num">支出</th><th class="num">収支</th><th class="num">期末残高</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+reports);
+    return panel("歴代成績・年度決算","全年度の明細を保存",'<div class="tablewrap"><table><thead><tr><th>年</th><th class="num">順位</th><th>優勝校</th><th class="num">収入</th><th class="num">支出</th><th class="num">収支</th><th class="num">期末残高</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+standings+alumni+reports);
   }
 
   function rivalDashboard(){
@@ -111,11 +117,20 @@
     return panel("ライバル大学の偵察","全7校が年間育成・会計・世代交代",'<p class="tiny muted">王者・北稜大学にも選手名簿と世代交代があります。順位は固定されず、その年の戦力と走りで決まります。</p>'+cards);
   }
 
+
+  function tutorial(){
+    const phase=state.race?(state.race.finished?"決算":("レース "+(state.race.leg+1)+"区")):(state.week>=12?"大会開始":"育成・準備");
+    const hint=state.race?(state.race.finished?"次年度へ進む前に年間収支と大会順位を確認しましょう。":"温存・標準・攻めを選び、残存体力とタイム差を確認しましょう。"):
+      state.week>=12?"5区間の出走選手を確定し、遠征費を確保して大会を開始しましょう。":
+      "12週で育成を進めます。合宿は今の5人、スカウトは来年度の新入生に効きます。";
+    return panel("監督手帳","現在の段階："+phase,'<p class="tiny">'+hint+'</p><details class="collapse"><summary class="tiny">基本操作と戦術のコツを読む</summary><ol class="tiny muted"><li>選手の得意な能力を見て5区間に配置</li><li>練習12週。疲労が高いと成長が落ちる</li><li>合宿・スカウト・回復は部費から出費</li><li>レースは各区間3地点、体力を見ながらペースを選ぶ</li><li>年度決算を確定すると4年生が卒業し新入部員が加入</li><li>最強の北稜大学も世代交代する。数年かけて全国優勝を狙おう</li></ol></details>');
+  }
+
   function render(){
     const root=document.getElementById("app");
     root.innerHTML='<div class="wrap"><header class="top"><div><div class="eyebrow">University long-distance strategy</div><h1 class="brand">EKIDEN <span class="accent">MANAGER</span></h1><div class="sub">栄光への襷 — 育成 × レース戦術 × 部費経営</div></div><span class="tag">OFFLINE ALPHA v0.2</span></header>'+
       statsCards()+'<div class="notice">'+esc(flash||state.lastLog)+'</div><div class="layout"><div>'+
-      racing()+training()+lineup()+runners()+'</div><aside>'+finance()+store()+rivalDashboard()+history()+'</aside></div>'+
+      racing()+training()+lineup()+runners()+'</div><aside>'+tutorial()+finance()+store()+rivalDashboard()+history()+'</aside></div>'+
       '<footer class="footer"><div>ゲームの選手・大学・財務は架空設定です。結果は乱数シードで再現可能です。</div><div class="flex"><button class="btn small ghost" data-action="export">セーブ書き出し</button><button class="btn small ghost" data-action="import">セーブ読込</button><button class="btn small danger" data-action="reset">最初から</button><input type="file" id="savefile" accept=".json,application/json" hidden/></div></footer></div>';
   }
   function execute(fn){flash="";try{fn();E.validate(state);persist();}catch(e){flash="操作できませんでした："+e.message;}render();}
