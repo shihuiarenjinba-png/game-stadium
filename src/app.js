@@ -54,9 +54,14 @@
       const last=c.splits.at(-1),secKm=last?.pace>0?last.pace:216;
       const distance=Math.max(0,kmFinished-Math.max(0,c.total-leader)/secKm),[x,y]=pos(distance/50);
       const fill=c.human?"#e7c076":c.boss?"#db786f":(["#8accc4","#8ab1d5","#a6a5db","#e8a4b1","#88bf9d","#bfcab5"][i%6]);
-      const jitter=(i-3)*1.7;return '<g><circle cx="'+(x+jitter).toFixed(1)+'" cy="'+(y+jitter).toFixed(1)+'" r="'+(c.human?8:5.6)+'" fill="'+fill+'" stroke="#10222d" stroke-width="2"><title>'+esc(c.name)+'・'+(i+1)+'位</title></circle>'+(c.human?'<circle cx="'+(x+jitter)+'" cy="'+(y+jitter)+'" r="11" fill="none" stroke="#f7e7b6" stroke-width="1.5"/>':'')+'</g>'}).join("");
+      // Screen-space fan-out prevents all eight teams overlapping at photo-finish precision.
+      // Rank labels are schematic; the exact time gaps remain in the ranking table.
+      const markerX=Math.max(13,Math.min(327,x+(i%2?4:-4)));
+      const markerY=Math.max(10,Math.min(118,Math.max(45,Math.min(83,y))+(i-3.5)*10));
+      return '<g><line x1="'+x.toFixed(1)+'" y1="'+y.toFixed(1)+'" x2="'+markerX.toFixed(1)+'" y2="'+markerY.toFixed(1)+'" stroke="'+fill+'" stroke-width="1.3" opacity=".65"/><circle cx="'+markerX.toFixed(1)+'" cy="'+markerY.toFixed(1)+'" r="8.4" fill="'+fill+'" stroke="#10222d" stroke-width="2"><title>'+esc(c.name)+'・'+(i+1)+'位</title></circle><text x="'+markerX.toFixed(1)+'" y="'+(markerY+3.1).toFixed(1)+'" fill="#10222d" font-size="9" font-weight="bold" text-anchor="middle">'+(i+1)+'</text>'+(c.human?'<circle cx="'+markerX.toFixed(1)+'" cy="'+markerY.toFixed(1)+'" r="11.3" fill="none" stroke="#f7e7b6" stroke-width="1.5"/>':'')+'</g>';
+    }).join("");
     const course=points.map(p=>p.join(",")).join(" ");
-    return '<div class="course" role="img" aria-label="各大学の走行位置を示す2Dコース図"><svg viewBox="0 0 340 128" width="100%" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="338" height="126" rx="11" fill="#233b3c"/><polyline points="'+course+'" fill="none" stroke="#516b63" stroke-width="20" stroke-linejoin="round" stroke-linecap="round"/><polyline points="'+course+'" fill="none" stroke="#dfcfa8" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><polyline points="'+course+'" fill="none" stroke="#fff3d8" stroke-width="1.5" stroke-dasharray="2 5"/><text x="16" y="122" fill="#e4e8df" font-size="10">START</text><text x="278" y="20" fill="#e4e8df" font-size="10">FINISH</text>'+dots+'</svg></div><div class="line tiny"><span class="muted">進行距離 '+kmFinished.toFixed(1)+' / 50km</span><span><span class="accent">●</span> 自校　<span style="color:#db786f">●</span> 北稜</span></div>';
+    return '<div class="course" role="img" aria-label="各大学の走行位置を示す2Dコース図"><svg viewBox="0 0 340 128" width="100%" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="338" height="126" rx="11" fill="#233b3c"/><polyline points="'+course+'" fill="none" stroke="#516b63" stroke-width="20" stroke-linejoin="round" stroke-linecap="round"/><polyline points="'+course+'" fill="none" stroke="#dfcfa8" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><polyline points="'+course+'" fill="none" stroke="#fff3d8" stroke-width="1.5" stroke-dasharray="2 5"/><text x="16" y="122" fill="#e4e8df" font-size="10">START</text><text x="278" y="20" fill="#e4e8df" font-size="10">FINISH</text>'+dots+'</svg></div><div class="line tiny"><span class="muted">進行距離 '+kmFinished.toFixed(1)+' / 50km</span><span><span class="accent">●</span> 自校　<span style="color:#db786f">●</span> 北稜</span></div><div class="tiny muted" style="margin-bottom:10px">※マーカーは重なりを防ぐため縦に分離した模式表示。正確な差は順位表のタイムを参照。</div>';
   }
   function standing(){
     if(!state.race)return "";
@@ -66,7 +71,7 @@
     const energy=Number.isFinite(human?.energy)?Math.round(human.energy):null;
     const energyWidget='<div class="energy-card"><div class="line"><strong>体力・ペース配分</strong><span class="tiny muted">'+esc(currentName)+'</span></div>'+(
       energy===null?'<div class="tiny muted">大会開始。ペース指示後に走者の体力が表示されます。</div>':
-      '<div class="bar" style="height:12px"><div class="fill '+(energy<35?"warn":"")+'" style="width:'+energy+'%"></div></div><div class="tiny muted" style="margin-top:6px">残存体力：'+energy+'/100　・次の区間で走者が交代します。</div>'
+      '<div class="bar" style="height:12px"><div class="fill '+(energy<35?"warn":"")+'" style="width:'+energy+'%"></div></div><div class="tiny muted" style="margin-top:6px">残存体力：'+energy+'/100　・'+(race.finished?'完走しました。':'次の区間で走者が交代します。')+'</div>'
     )+'</div>';
     return energyWidget+courseMap()+'<div class="track">'+E.LEGS.map((leg,i)=>'<div class="seg '+(i<race.leg?"done":i===race.leg?"now":"")+'">'+(i+1)+'区<small>'+leg.km+'km</small></div>').join("")+'</div>'+
       '<div class="loglist">'+sorted.map((c,i)=>'<div class="ranking"><div class="ranknum">'+(i+1)+'</div><div class="'+(c.human?"green strong":c.boss?"accent strong":"")+'">'+esc(c.name)+(c.boss?" ★強豪":"")+'</div><div class="ranktime">'+time(c.total)+(i?(' / +'+time(c.total-sorted[0].total)):' / 先頭')+'</div></div>').join("")+'</div>'+
