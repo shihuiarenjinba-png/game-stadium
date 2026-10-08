@@ -17,6 +17,7 @@ function createUiHarness(){
   const context={document,localStorage,console,Date,setTimeout:fn=>fn(),confirm:()=>true};
   const global=vm.createContext(context);
   vm.runInContext(fs.readFileSync(path.join(__dirname,"../src/engine.js"),"utf8"),global,{filename:"engine.js"});
+  vm.runInContext(fs.readFileSync(path.join(__dirname,"../src/prediction.js"),"utf8"),global,{filename:"prediction.js"});
   vm.runInContext(fs.readFileSync(path.join(__dirname,"../src/app.js"),"utf8"),global,{filename:"app.js"});
   return {
     get markup(){return markup;},
@@ -38,6 +39,10 @@ test("training, scouting, checkpoint map, year-end accounting, and autosave run 
   assert.equal(app.state.cash,2220000);
   for(let w=0;w<12;w++)app.click("train");
   assert.equal(app.state.week,12);
+  assert.match(app.markup,/レース順位予想・オッズ/);
+  app.click("prediction");
+  assert.equal(app.state.prediction.status,"placed");
+  assert.equal(app.state.prediction.stake,50000);
   app.click("start");
   assert.match(app.markup,/スタート前/);
   assert.match(app.markup,/class="course"/);
@@ -47,6 +52,8 @@ test("training, scouting, checkpoint map, year-end accounting, and autosave run 
     assert.equal(app.state.race.notes.length,checkpoint+1);
   }
   assert.equal(app.state.race.finished,true);
+  assert.match(app.markup,/EKIDEN LIVE/);
+  assert.ok(["won","lost"].includes(app.state.prediction.status));
   assert.match(app.markup,/年度決算を確定して次年度へ/);
   const ending=app.state.cash;
   app.click("close");
