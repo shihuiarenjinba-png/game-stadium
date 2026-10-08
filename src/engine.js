@@ -48,7 +48,7 @@ function validate(s){
        !RIVALS.some(t=>t.name===p.team)&&p.team!=="あなたの大学"||
        !Number.isInteger(p.rank)||p.rank<1||p.rank>8||
        !Number.isSafeInteger(p.stake)||p.stake<20000||p.stake>400000||p.stake%10000!==0||
-       !Number.isFinite(p.odds)||p.odds<1.1||p.odds>16||
+       !Number.isFinite(p.odds)||p.odds<1||p.odds>16||
        !Number.isSafeInteger(p.payout)||p.payout<0||p.payout>6400000)
        throw Error("順位予想データが不正です");
   }
