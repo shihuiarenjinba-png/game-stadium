@@ -4,7 +4,6 @@
   const E=globalThis.EkidenEngine, KEY="ekiden-manager-v1", LANG_KEY="ekiden-manager-language";
   let locale="ja";
   try{const stored=localStorage.getItem(LANG_KEY);if(["ja","en"].includes(stored))locale=stored;
-    else if(typeof navigator!=="undefined"&&/^en\\b/i.test(navigator.language||""))locale="en";
   }catch(_e){locale="ja";}
 
   if(!E){document.getElementById("app").textContent="ゲームの読み込みに失敗しました。";return;}
