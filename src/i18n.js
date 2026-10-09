@@ -15,8 +15,8 @@
  function translateText(value,lang="en"){
   if(lang!=="en"||!value||!/[\u3000-\u9fff\u3040-\u30ff]/.test(value))return value;
   let out=String(value);
-  for(const [jp,en] of entries)if(out.includes(jp))out=out.split(jp).join(en);
   for(const [regex,to] of dynamic)out=out.replace(regex,to);
+  for(const [jp,en] of entries)if(out.includes(jp))out=out.split(jp).join(en);
   return out;
  }
  function localize(root,lang){
