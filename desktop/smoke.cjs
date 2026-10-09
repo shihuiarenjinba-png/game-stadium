@@ -53,6 +53,10 @@ async function run(){
   assert.equal(await query("JSON.parse(localStorage.getItem('ekiden-manager-v1')).scoutedSchools.includes(3)"),true);
   assert.ok(await query("document.querySelectorAll('[data-action=target]').length")>=2);
   await screenshot("01-scout-high-school");
+  await query("(()=>{const p=[...document.querySelectorAll('.panel')].find(p=>p.querySelector('h2')?.textContent.includes('選手名鑑'));if(p)p.scrollIntoView({block:'start'});return !!p})()");
+  assert.match(await query("document.body.innerText"),/失速リスク/);
+  await screenshot("01-roster-mental");
+  await query("window.scrollTo(0,0)");
   for(let i=0;i<12;i++)await click("train");
   const week=await query("JSON.parse(localStorage.getItem('ekiden-manager-v1')).week");
   assert.equal(week,12);
@@ -69,6 +73,9 @@ async function run(){
   const stage=await query("JSON.parse(localStorage.getItem('ekiden-manager-v1')).race");
   assert.equal(stage.leg,2);
   assert.equal(stage.segment,0);
+  await query("document.querySelector('.mental-live')?.scrollIntoView({block:'start'})");
+  await screenshot("02-race-mental");
+  await query("window.scrollTo(0,0)");
   await screenshot("02-race");
   for(let i=6;i<15;i++)await click("next");
   assert.equal(await query("JSON.parse(localStorage.getItem(\'ekiden-manager-v1\')).race.waterCups"),15);
