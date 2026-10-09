@@ -439,3 +439,45 @@ test("there are truly hidden special recruits in multiple high schools without g
  assert.ok(stars>100&&schools.size>=25);
  assert.ok(emptyVisits>60,"scouting is a risk, not a fixed star purchase");
 });
+
+test("grit and big-stage poise independently affect race speed with stochastic choke/flow outcomes",()=>{
+ const G=globalThis.EkidenEngine;
+ const counts={poised:{choke:0,flow:0},nervous:{choke:0,flow:0}};
+ for(let seed=1;seed<=1500;seed++){
+   for(const [key,stage] of [["poised",95],["nervous",12]]){
+     const s=G.newGame(seed);
+     const result=G.pressureOutcome(s,{stats:{grit:95},stage,consistency:75,morale:75});
+     counts[key].choke+=result.state==="choke";counts[key].flow+=result.state==="flow";
+     assert.ok(result.chokeChance>=1.2&&result.chokeChance<=23);
+   }
+ }
+ assert.ok(counts.nervous.choke>counts.poised.choke*2,"high grit must not hide severe stage fright");
+ assert.ok(counts.nervous.choke>80&&counts.poised.flow>35,"positive and negative big-day outcomes are possible");
+});
+test("mental swing affects recorded checkpoint pace and remains reproducible from the save seed",()=>{
+ const G=globalThis.EkidenEngine;
+ const initial=G.newGame(181);
+ for(let i=0;i<12;i++)G.train(initial,"grit","normal");
+ const a=JSON.parse(JSON.stringify(initial)),b=JSON.parse(JSON.stringify(initial));
+ G.startRace(a);G.startRace(b);
+ for(let i=0;i<15;i++){G.stepRace(a,"steady",1);G.stepRace(b,"steady",1);}
+ assert.deepEqual(a,b);
+ G.validate(a);
+ const splits=a.race.contestants.find(c=>c.human).splits;
+ assert.equal(splits.length,5);
+ for(const x of splits)for(const p of x.partials){
+   assert.ok(["choke","flow","steady"].includes(p.mentalOutcome));
+   assert.ok(Number.isFinite(p.mentalPenalty));
+ }
+});
+test("old saves migrate mental stability and stage poise without consuming random numbers",()=>{
+ const G=globalThis.EkidenEngine,s=G.newGame(44);
+ for(const a of s.roster){delete a.traits.consistency;delete a.traits.stage;}
+ for(const t of s.rivalTeams)for(const r of t.roster){delete r.consistency;delete r.stage;}
+ const rng=s.rng;
+ G.migrateSave(s);
+ assert.equal(s.rng,rng);
+ assert.ok(s.roster.every(r=>r.traits.consistency===60&&r.traits.stage===55));
+ assert.ok(s.rivalTeams.every(t=>t.roster.every(r=>r.consistency===60&&r.stage===55)));
+ G.validate(s);
+});
