@@ -29,6 +29,21 @@
     const selects=E.SKILLS.map(s=>'<option value="'+s+'">'+skillLabels[s]+'</option>').join("");
     return panel("週間トレーニング","年間12週を圧縮したシーズン","<p class='muted tiny'>選んだ能力を10名全員が鍛えます。出走予定の5名は合宿・測定の特別効果を受けます。疲労が高いと練習効率が低下します。</p><div class='controlrow'><div class='field'><label for='focus'>育成項目</label><select id='focus'>"+selects+"</select></div><div class='field'><label for='intensity'>練習強度</label><select id='intensity'><option value='light'>調整練習（¥38,000）</option><option value='normal' selected>通常練習（¥72,000）</option><option value='hard'>高強度（¥110,000）</option></select></div><button class='btn' data-action='train' "+(disabled?"disabled":"")+">次の週へ進む →</button></div><div class='divider'></div><div class='flex'><span class='pill'>"+state.week+" / 12週</span><span class='muted tiny'>3D表示・通信なし / セーブ対応</span></div>")
   }
+  function highSchoolRecruitment(){
+    const schools=E.visibleScouting(state),scouted=schools.filter(h=>h.scouted);
+    const locked=!!state.race||state.week>=12||(state.scouting||0)>=3;
+    const list=schools.map(h=>'<option value="'+h.id+'" '+(h.scouted?'disabled':'')+'>'+esc(h.name)+'（'+h.region+'・'+h.style+'）'+(h.scouted?'・訪問済':'')+'</option>').join("");
+    const reports=scouted.map(h=>'<div class="school-report"><div><strong>'+esc(h.name)+'</strong> <span class="pill">調査済</span><p class="tiny muted">'+esc(h.region)+' / '+esc(h.style)+' / '+h.prospects.length+'名発見</p></div><div class="school-prospects">'+h.prospects.map(p=>{
+      const desc=E.SKILLS.map(k=>'<span>'+esc(k)+': '+p.approx[k]+'前後</span>').join(' ');
+      return '<div class="recruit-candidate"><strong>'+esc(p.name)+'</strong>'+(p.talent?'<span class="talent-chip">★ '+esc(p.talent)+'</span>':'')+
+        '<div class="tiny muted">高校3年 / 能力は視察時の概算値</div><div class="tiny">'+desc+'</div><button class="btn small '+(p.targeted?'secondary':'')+'" data-action="target" data-id="'+p.id+'" '+(state.race||state.week>=12?'disabled':'')+'>'+(p.targeted?'勧誘予約を解除':'この生徒に入部打診')+'</button></div>';
+    }).join('')+'</div></div>').join('');
+    return panel("全国高校スカウト","40校・候補者の能力と逸材の在籍校は訪問前には非公開",
+      '<p class="tiny muted">視察先を選び、1校あたり'+yen(E.SCOUT_COST)+'で交通・調査・面談を実施します。年間3校まで。調査後に本人へ入部を打診できます（最大3名、辞退あり）。発掘した候補は次年度の新入生に反映されます。</p>'+
+      '<div class="controlrow"><div class="field"><label for="scout-school">視察する高等学校</label><select id="scout-school">'+list+'</select></div><button class="btn" data-action="scout" '+(locked||state.cash-E.SCOUT_COST<480000+(12-state.week)*38000?'disabled':'')+'>視察 '+yen(E.SCOUT_COST)+'</button></div>'+
+      '<div class="flex"><span class="pill">視察 '+(state.scouting||0)+' / 3校</span><span class="pill">勧誘予約 '+(state.recruitTargets||[]).length+' / 3名</span><span class="pill">未調査 '+(schools.length-scouted.length)+'校</span></div>'+
+      (reports||'<p class="tiny muted">まだ高校を訪問していません。強豪の新入生がどこにいるかは隠されています。</p>'));
+  }
   function schoolEvents(){
     const all=(state.events||[]).filter(e=>e.year===state.year).slice(-7).reverse();
     return panel("大学生活・突発イベント","好調も不調も育成と予算に反映",
@@ -51,9 +66,8 @@
       const available=state.week<12&&!state.race&&state.cash-item.cost>=protectedCash&&(key==="elite"?(state.items.elite||0)===0:key==="recovery"||state.items[key]<2);
       return '<div class="shopcard'+(key==="elite"?' premium-item':'')+'"><div><strong>'+(key==="elite"?'★ 高額・高効果　':'')+esc(item.name)+'</strong><p>'+esc(item.desc)+'</p>'+(state.items[key]?'<span class="pill">'+(key==="elite"?'残り '+state.items[key]+'練習':'保有 '+state.items[key]+'個')+'</span>':'')+(key==="elite"?'<div class="tiny muted">通常練習と遠征費を残せる場合に購入できます。ほかの強化投資との両立は難しくなります。</div>':'')+'</div><button class="btn small secondary" data-action="buy" data-key="'+key+'" '+(available?'':'disabled')+'>'+yen(item.cost)+'</button></div>';
     }).join("");
-    const recruitment='<div class="shopcard"><div><strong>来年度のスカウト活動</strong><p>高校生の視察・勧誘。翌年度の新入生の能力が上昇します（年最大3回）。費用は部費から支出。</p><span class="pill">今年度 '+(state.scouting||0)+'/3回</span></div><button class="btn small secondary" data-action="scout" '+((state.race||state.week>=12||(state.scouting||0)>=3||state.cash-180000<480000+(12-state.week)*38000)?"disabled":"")+'>¥180,000</button></div>';
     const invite=state.offer?'<div class="shopcard" style="border-color:#dbb777;background:#2e3230"><div><strong class="accent">★ 抽選で合同合宿に招待！</strong><p>部費¥260,000で次回の選抜5名の成長が2倍。残り期限：第'+state.offer.expires+'週まで。</p></div><button class="btn small" data-action="buy" data-key="invite" '+(state.race||state.week>=12||state.cash-260000<480000+(12-state.week)*38000?"disabled":"")+'>招待を使う</button></div>':'';
-    return panel("部費で購入する支援・備品","最低練習・遠征を確保：残り"+yen(usableCash),'<p class="tiny muted">通常練習を残り全週続ける場合のアイテム購入余力：'+yen(normalPlanCash)+'。高額プログラムを購入すると他の支出を抑える必要があります。</p><p class="tiny muted">支援効果はゲーム用に誇張していますが、合宿・測定・補給・装備など実在する活動に費用を割り当てています。購入費は全額その年度に記帳します。</p>'+recruitment+invite+shop)
+    return panel("部費で購入する支援・備品","最低練習・遠征を確保：残り"+yen(usableCash),'<p class="tiny muted">通常練習を残り全週続ける場合のアイテム購入余力：'+yen(normalPlanCash)+'。高額プログラムを購入すると他の支出を抑える必要があります。</p><p class="tiny muted">支援効果はゲーム用に誇張していますが、合宿・測定・補給・装備など実在する活動に費用を割り当てています。購入費は全額その年度に記帳します。</p>'+invite+shop)
   }
   // No 3D characters: a schematic 2D route with distance-scaled checkpoint markers.
 
@@ -165,7 +179,7 @@
     const phase=state.race?(state.race.finished?"決算":("レース "+(state.race.leg+1)+"区")):(state.week>=12?"大会開始":"育成・準備");
     const hint=state.race?(state.race.finished?"次年度へ進む前に年間収支と大会順位を確認しましょう。":"温存・標準・攻めを選び、残存体力とタイム差を確認しましょう。"):
       state.week>=12?"5区間の出走選手を確定し、遠征費を確保して大会を開始しましょう。":
-      "12週で育成を進めます。合宿は今の5人、スカウトは来年度の新入生に効きます。";
+      "12週で育成を進めます。全国40高校から視察先を選び、費用を払って選手を探しましょう。";
     return panel("監督手帳","現在の段階："+phase,'<p class="tiny">'+hint+'</p><details class="collapse"><summary class="tiny">基本操作と戦術のコツを読む</summary><ol class="tiny muted"><li>選手の得意な能力を見て5区間に配置</li><li>練習12週。疲労が高いと成長が落ちる</li><li>合宿・スカウト・回復は部費から出費</li><li>レースは各区間3地点、体力を見ながらペースを選ぶ</li><li>年度決算を確定すると4年生が卒業し新入部員が加入</li><li>最強の北稜大学も世代交代する。数年かけて全国優勝を狙おう</li></ol></details>');
   }
 
@@ -173,7 +187,7 @@
     const root=document.getElementById("app");
     root.innerHTML='<div class="wrap"><header class="top"><div><div class="eyebrow">University long-distance strategy</div><h1 class="brand">EKIDEN <span class="accent">MANAGER</span></h1><div class="sub">栄光への襷 — 育成 × レース戦術 × 部費経営</div></div><span class="tag">OFFLINE ALPHA v0.5.0</span></header>'+
       statsCards()+'<div class="notice">'+esc(flash||state.lastLog)+'</div><div class="layout"><div>'+
-      (state.week>=12&&!state.race&&!state.ending?predictionMarket():'')+racing()+training()+schoolEvents()+lineup()+runners()+'</div><aside>'+tutorial()+(state.week>=12&&!state.race&&!state.ending?'':predictionMarket())+finance()+store()+rivalDashboard()+history()+'</aside></div>'+
+      (state.week>=12&&!state.race&&!state.ending?predictionMarket():'')+racing()+training()+highSchoolRecruitment()+schoolEvents()+lineup()+runners()+'</div><aside>'+tutorial()+(state.week>=12&&!state.race&&!state.ending?'':predictionMarket())+finance()+store()+rivalDashboard()+history()+'</aside></div>'+
       '<footer class="footer"><div>ゲームの選手・大学・財務は架空設定です。結果は乱数シードで再現可能です。</div><div class="flex"><button class="btn small ghost" data-action="export">セーブ書き出し</button><button class="btn small ghost" data-action="import">セーブ読込</button><button class="btn small danger" data-action="reset">最初から</button><input type="file" id="savefile" accept=".json,application/json" hidden/></div></footer></div>';
   }
   function execute(fn){flash="";const checkpoint=JSON.stringify(state);try{fn();E.validate(state);persist();}catch(e){state=JSON.parse(checkpoint);flash="操作できませんでした："+e.message;}render();}
@@ -187,7 +201,8 @@
     execute(()=>{
       if(action==="train")E.train(state,document.getElementById("focus").value,document.getElementById("intensity").value);
       else if(action==="buy")E.buyItem(state,button.dataset.key);
-      else if(action==="scout")E.investScouting(state);
+      else if(action==="scout")E.investScouting(state,Number(document.getElementById("scout-school").value));
+      else if(action==="target")E.targetRecruit(state,Number(button.dataset.id));
       else if(action==="prediction")globalThis.EkidenPrediction.place(state,marketTeam,marketRank,marketStake);
       else if(action==="lineup")E.setLineup(state,E.LEGS.map((_,i)=>Number(document.getElementById("leg-"+i).value)));
       else if(action==="start")E.startRace(state);
