@@ -1,0 +1,17 @@
+# Local dependencies and packaged artifacts
+node_modules/
+dist/
+build/icon.png
+build/icon.ico
+*.log
+npm-debug.log*
+coverage/
+.DS_Store
+Thumbs.db
+# Do not commit developer signing credentials
+*.pfx
+*.p12
+*.pem
+*.key
+.env
+.env.*

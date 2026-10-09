@@ -1,0 +1,60 @@
+name: Windows desktop unsigned alpha
+on:
+  push:
+    branches: [feature/ekiden-manager-mvp]
+  workflow_dispatch:
+concurrency:
+  group: windows-game-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  windows-portable-and-installer:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install pinned build dependencies
+        run: npm install --no-audit --no-fund
+      - name: Run game engine tests
+        run: npm test
+      - name: Real Windows Electron UI smoke with screenshot verification
+        run: npm run test:desktop
+      - name: Upload visual QA snapshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekiden-manager-windows-ui-screenshots
+          path: smoke-output/*.png
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Build Windows installer and portable app
+        run: npm run build:win
+      - name: Verify BOTH installer and portable are present and hash them
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem dist -Filter 'EKIDEN-MANAGER-Setup-*.exe')
+          $portables  = @(Get-ChildItem dist -Filter 'EKIDEN-MANAGER-Portable-*.exe')
+          if ($installers.Count -ne 1 -or $portables.Count -ne 1) {
+            throw "Expected one Setup EXE and one Portable EXE. Found setup=$($installers.Count), portable=$($portables.Count)"
+          }
+          $executables = @(Get-ChildItem dist -Filter '*.exe')
+          if ($executables.Count -ne 2) {
+            throw "Expected exactly two Windows EXEs, found $($executables.Count)"
+          }
+          $executables | ForEach-Object {
+            $hash = (Get-FileHash -Algorithm SHA256 -Path $_.FullName).Hash
+            Write-Output "$($_.Name) SHA256=$hash"
+          }
+      - name: Upload development build (NOT a signed sales release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekiden-manager-windows-UNSIGNED-alpha
+          path: dist/*.exe
+          if-no-files-found: error
+          retention-days: 14

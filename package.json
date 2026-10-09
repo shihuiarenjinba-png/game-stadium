@@ -1,0 +1,61 @@
+{
+  "name": "ekiden-manager",
+  "version": "0.7.0",
+  "private": true,
+  "description": "Offline ekiden manager with eight-year championship, virtual ranks market and 2D racing broadcast",
+  "scripts": {
+    "test": "node --test tests/*.test.cjs",
+    "dev": "electron .",
+    "build:win": "python scripts/make_icon.py && electron-builder --win --x64 --publish never",
+    "test:desktop": "electron desktop/smoke.cjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "desktop/main.cjs",
+  "devDependencies": {
+    "electron": "44.6.0",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "jp.ekidenmanager.game",
+    "productName": "EKIDEN MANAGER",
+    "asar": true,
+    "files": [
+      "index.html",
+      "src/**/*.js",
+      "src/**/*.css",
+      "desktop/main.cjs",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "artifactName": "EKIDEN-MANAGER-Setup-${version}-${arch}.${ext}"
+    },
+    "portable": {
+      "artifactName": "EKIDEN-MANAGER-Portable-${version}-${arch}.${ext}"
+    }
+  }
+}
