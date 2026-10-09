@@ -61,3 +61,5 @@
 .event-item strong{color:#f7d99a}
 .event-item p{margin:5px 0 0;color:#c9d7d4}
 @media(max-width:560px){.hydration-panel{padding:11px}.hydration-panel .controlrow{display:grid;grid-template-columns:1fr}.hydration-panel .field{min-width:0}}
+
+.school-report{border:1px solid #526c66;background:#1b2c34;padding:12px;margin:10px 0;border-radius:10px}.school-report>div>strong{color:#ffe3a5}.school-prospects{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:8px;margin-top:10px}.recruit-candidate{border:1px solid #3a5f64;border-radius:9px;padding:10px;background:#1b373c}.recruit-candidate>.tiny{margin:5px 0}.recruit-candidate>button{margin-top:9px}.school-report .talent-chip{margin-left:6px}
