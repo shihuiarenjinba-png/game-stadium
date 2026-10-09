@@ -19,7 +19,63 @@ function addMoney(s,amount,kind,label){if(amount<0 && s.cash+amount<0)throw Erro
 
 function makeRunner(s,name,grade,id){let level=54+grade*4+(grade===1?Math.min(14,(s.year-1)*3.3):0)+between(s,-5,9);let x={id,name,grade,fatigue:between(s,6,18),morale:between(s,60,86),traits:{clutch:between(s,0,1),hill:between(s,-5,5)},stats:{}};for(const k of SKILLS)x.stats[k]=Math.round(clamp(level+between(s,-7,7),35,90)*10)/10;return x}
 
-function newGame(seed=20261008){let s={version:1,year:1,week:0,rng:(seed>>>0)||1,cash:0,roster:[],lineup:[],ledger:[],history:[],alumni:[],events:[],items:{camp:0,science:0,recovery:0,rain:0,elite:0},scouting:0,offer:null,prediction:null,ending:null,race:null,lastLog:"創部1年目。全国駅伝の絶対王者・北稜大学に挑戦します。",awards:0};for(let i=0;i<10;i++){let grade=i<2?4:i<5?3:i<8?2:1;s.roster.push(makeRunner(s,NAMES[i],grade,i+1));}s.lineup=s.roster.slice(0,5).map(r=>r.id);ensureRivalTeams(s);addMoney(s,4000000,"収入","大学からの年間部費配分");addMoney(s,600000,"収入","OB・OG会の年間活動支援");addMoney(s,-2200000,"固定費","年間運営経費（施設・保険・指導補助・用具）");return s}
+
+const HIGH_SCHOOLS=["北浜","青葉","栄明","桜野","海東","西丘","若松","山ノ手","翠嶺","東海","白鷺","光陵","玄海","南翔","北都","成和","旭ヶ丘","中岳","清流","東雲","啓星","潮見","明星","金嶺","富嶽","竹原","松風","陽南","久遠","北原","彩雲","瑞穂","湘明","日高","常盤","優駿","蒼山","南風","鶴見","朝凪"].map((name,i)=>({id:i,name:name+"高等学校",region:["北日本","東日本","中日本","西日本","南日本"][i%5],style:["速度型","登坂型","持久型","総合型"][i%4]}));
+const SCOUT_COST=180000;
+function highSchoolPool(s){
+ const seed=((s.scoutSeed||1)^(Math.imul(s.year,2654435761)))>>>0;let x=seed;
+ const rand=()=>{x=(Math.imul(1664525,x)+1013904223)>>>0;return x/4294967296};
+ const pool=[];
+ for(const school of HIGH_SCHOOLS){
+   const count=2+Math.floor(rand()*2);
+   for(let j=0;j<count;j++){
+     const exceptional=rand()<.036;
+     const genius=exceptional&&rand()<.23;
+     const styleKey=["speed","hill","stamina","grit"][school.id%4];
+     const stats={};
+     for(const skill of SKILLS){
+       let v=54+rand()*17+(skill===styleKey?5:0);
+       if(exceptional)v+=(genius?16:skill===styleKey?22:9);
+       stats[skill]=Math.round(clamp(v,35,99)*10)/10;
+     }
+     const surname=NAMES[Math.floor(rand()*NAMES.length)].split(" ")[0];
+     const given=NAMES[Math.floor(rand()*NAMES.length)].split(" ")[1];
+     pool.push({id:school.id*10+j,schoolId:school.id,name:surname+" "+given,stats,
+       talent:genius?"天才1年生":exceptional?"特待級ルーキー":null,
+       potential:exceptional?99:Math.round(83+rand()*15)});
+   }
+ }
+ return pool;
+}
+function ensureScouting(s){
+ if(!Number.isInteger(s.scoutSeed))s.scoutSeed=s.rng>>>0;
+ if(!Array.isArray(s.scoutedSchools))s.scoutedSchools=[];
+ if(!Array.isArray(s.recruitTargets))s.recruitTargets=[];
+ if(!Array.isArray(s.prospects)||s.prospects.length<HIGH_SCHOOLS.length*2)s.prospects=highSchoolPool(s);
+ return s;
+}
+function visibleScouting(s){
+ ensureScouting(s);
+ return HIGH_SCHOOLS.map(school=>({id:school.id,name:school.name,region:school.region,style:school.style,
+   scouted:s.scoutedSchools.includes(school.id),
+   prospects:s.scoutedSchools.includes(school.id)?s.prospects.filter(p=>p.schoolId===school.id).map(p=>({
+     id:p.id,name:p.name,talent:p.talent,potential:p.potential,grade:"高校3年",
+     approx:Object.fromEntries(SKILLS.map(k=>[k,Math.round(p.stats[k]/5)*5])),
+     targeted:s.recruitTargets.includes(p.id)
+   })):[]}));
+}
+function targetRecruit(s,id){
+ ensureScouting(s);
+ if(s.race||s.week>=12)throw Error("勧誘予約は大会前のみ設定できます");
+ if(!Number.isInteger(id))throw Error("候補者IDが不正です");
+ const p=s.prospects.find(p=>p.id===id&&s.scoutedSchools.includes(p.schoolId));
+ if(!p)throw Error("未調査の高校生は勧誘できません");
+ if(s.recruitTargets.includes(id)){s.recruitTargets=s.recruitTargets.filter(t=>t!==id);s.lastLog=p.name+"の勧誘予約を解除。";return s;}
+ if(s.recruitTargets.length>=3)throw Error("勧誘予約は最大3名です");
+ s.recruitTargets.push(id);s.lastLog=p.name+"に来年度の入部を打診します。本人の判断で辞退する場合があります。";return s;
+}
+
+function newGame(seed=20261008){let s={version:1,year:1,week:0,rng:(seed>>>0)||1,cash:0,roster:[],lineup:[],ledger:[],history:[],alumni:[],events:[],items:{camp:0,science:0,recovery:0,rain:0,elite:0},scouting:0,scoutSeed:(seed>>>0)||1,scoutedSchools:[],recruitTargets:[],prospects:[],offer:null,prediction:null,ending:null,race:null,lastLog:"創部1年目。全国駅伝の絶対王者・北稜大学に挑戦します。",awards:0};for(let i=0;i<10;i++){let grade=i<2?4:i<5?3:i<8?2:1;s.roster.push(makeRunner(s,NAMES[i],grade,i+1));}s.lineup=s.roster.slice(0,5).map(r=>r.id);ensureRivalTeams(s);ensureScouting(s);addMoney(s,4000000,"収入","大学からの年間部費配分");addMoney(s,600000,"収入","OB・OG会の年間活動支援");addMoney(s,-2200000,"固定費","年間運営経費（施設・保険・指導補助・用具）");return s}
 
 function validate(s){
   if(!s||s.version!==1||!Number.isInteger(s.year)||s.year<1||s.year>1000||!Number.isInteger(s.week)||s.week<0||s.week>12||!Number.isInteger(s.rng)||!Number.isSafeInteger(s.cash)||s.cash<0)
@@ -64,6 +120,10 @@ function validate(s){
     t.roster.some(r=>!r||!Number.isInteger(r.id)||!r.name||!Number.isInteger(r.grade)||r.grade<1||r.grade>4||!r.stats||SKILLS.some(k=>!Number.isFinite(r.stats[k])||r.stats[k]<0||r.stats[k]>100))||
     !Array.isArray(t.lineup)||t.lineup.length!==5||new Set(t.lineup).size!==5||t.lineup.some(id=>!t.roster.some(r=>r.id===id))
   )))throw Error("CPU大学の保存データが不正です");
+  if(s.scoutedSchools!==undefined&&(!Array.isArray(s.scoutedSchools)||s.scoutedSchools.length>3||new Set(s.scoutedSchools).size!==s.scoutedSchools.length||s.scoutedSchools.some(id=>!Number.isInteger(id)||!HIGH_SCHOOLS[id])))throw Error("スカウト高校の情報が不正です");
+  if(s.recruitTargets!==undefined&&(!Array.isArray(s.recruitTargets)||s.recruitTargets.length>3||new Set(s.recruitTargets).size!==s.recruitTargets.length||s.recruitTargets.some(id=>!Number.isInteger(id))))throw Error("勧誘候補の情報が不正です");
+  if(s.prospects!==undefined&&(!Array.isArray(s.prospects)||s.prospects.length>150||s.prospects.some(p=>!p||!Number.isInteger(p.id)||!Number.isInteger(p.schoolId)||!HIGH_SCHOOLS[p.schoolId]||typeof p.name!=="string"||p.name.length>100||!p.stats||SKILLS.some(k=>!Number.isFinite(p.stats[k])||p.stats[k]<0||p.stats[k]>99))))throw Error("候補者情報が不正です");
+  if(Array.isArray(s.recruitTargets)&&Array.isArray(s.prospects)&&s.recruitTargets.some(id=>!s.prospects.some(p=>p.id===id&&s.scoutedSchools.includes(p.schoolId))))throw Error("未視察選手を勧誘しています");
   if(s.events!==undefined&&(!Array.isArray(s.events)||s.events.length>MAX_SEASONS*12*2||s.events.some(e=>!e||!Number.isInteger(e.year)||!Number.isInteger(e.week)||typeof e.headline!=="string"||e.headline.length>120||typeof e.detail!=="string"||e.detail.length>300)))throw Error("イベント履歴が不正です");
   if(s.roster.some(r=>("focusLoss" in r&&(!Number.isInteger(r.focusLoss)||r.focusLoss<0||r.focusLoss>4))||("focusBoost" in r&&(!Number.isInteger(r.focusBoost)||r.focusBoost<0||r.focusBoost>4))))throw Error("選手のイベント効果が不正です");
   if(s.race&&("waterSpent" in s.race&&(!Number.isSafeInteger(s.race.waterSpent)||s.race.waterSpent<0||s.race.waterSpent>MAX_SEASONS*15*3*WATER_COST)))throw Error("給水費用が不正です");
@@ -79,6 +139,7 @@ function migrateSave(s){
   if(!Array.isArray(s.events))s.events=[];
   for(const r of s.roster){if(!Number.isInteger(r.focusLoss))r.focusLoss=0;if(!Number.isInteger(r.focusBoost))r.focusBoost=0;}
   if(s.items&&s.items.elite===undefined)s.items.elite=0;
+  ensureScouting(s);
   ensureRivalTeams(s);
   for(const team of s.rivalTeams)if(!Number.isSafeInteger(team.finance.opening))team.finance.opening=team.cash-team.finance.income+team.finance.expenses;
   if(s.race){
@@ -97,15 +158,20 @@ function setLineup(s,ids){if(s.prediction&&s.prediction.status==="placed")throw 
 
 function buyItem(s,key){if(s.race||s.week>=12)throw Error("大会前の練習期間のみ購入できます");let special=key==="invite";let item=special&&s.offer&&s.week<=s.offer.expires?{name:"特別合同合宿への招待枠",cost:260000}:SHOP[key];if(!item)throw Error("その備品はありません");let stockKey=special?"camp":key;if(key==="elite"&&s.items.elite>0)throw Error("全国強化プログラムは使い切ってから再購入してください");if(key!=="recovery" && key!=="elite" && s.items[stockKey]>=2)throw Error("同一アイテムの保管上限は2個です");if(s.cash-item.cost<480000+(12-s.week)*38000)throw Error("残りの最低練習費と大会遠征費を確保してください");addMoney(s,-item.cost,"購入費",item.name);if(key==="recovery"){for(const r of s.roster){r.fatigue=clamp(r.fatigue-23,0,100);r.morale=clamp(r.morale+6,0,100);}s.lastLog="栄養・回復支援により疲労を軽減しました。";}else{s.items[stockKey]+=key==="elite"?3:1;if(special)s.offer=null;s.lastLog=item.name+"を購入しました（次回の対象機会に使用）。";}return s}
 
-function investScouting(s){
+function investScouting(s,schoolId=null){
   if(s.race||s.week>=12)throw Error("スカウト活動は練習期間中に行います");
-  if(!Number.isInteger(s.scouting))s.scouting=0;
-  if(s.scouting>=3)throw Error("スカウト投資は年度ごとに最大3回です");
-  const cost=180000;
-  if(s.cash-cost<480000+(12-s.week)*38000)throw Error("残りの最低練習費と大会遠征費を確保してください");
-  addMoney(s,-cost,"採用・勧誘費","高校長距離選手のスカウト活動");
+  ensureScouting(s);
+  if(s.scouting>=3)throw Error("高校訪問は年度ごとに最大3回です");
+  if(schoolId===null||schoolId===undefined)schoolId=HIGH_SCHOOLS.find(x=>!s.scoutedSchools.includes(x.id))?.id;
+  if(!Number.isInteger(schoolId)||!HIGH_SCHOOLS[schoolId])throw Error("高校の指定が不正です");
+  if(s.scoutedSchools.includes(schoolId))throw Error("この高校は既に調査済みです");
+  if(s.cash-SCOUT_COST<480000+(12-s.week)*38000)throw Error("残りの最低練習費と大会遠征費を確保してください");
+  const school=HIGH_SCHOOLS[schoolId];
+  addMoney(s,-SCOUT_COST,"採用・勧誘費",school.name+"の視察・交通・調査費");
   s.scouting++;
-  s.lastLog="次年度の新入生へのスカウト投資を実行（今年度"+s.scouting+"/3回）。";
+  s.scoutedSchools.push(schoolId);
+  const students=s.prospects.filter(p=>p.schoolId===schoolId),standouts=students.filter(p=>p.talent);
+  s.lastLog=school.name+"を視察し、"+students.length+"人の候補者を確認。"+(standouts.length?"★逸材の報告あり！":"勧誘する高校生を選べます。");
   return s;
 }
 
@@ -312,7 +378,19 @@ function nextLeg(s,stance="steady",water=0){
 
 function financials(s,year=s.year){let entries=s.ledger.filter(x=>x.year===year);let income=entries.filter(x=>x.amount>0).reduce((n,x)=>n+x.amount,0),expenses=-entries.filter(x=>x.amount<0).reduce((n,x)=>n+x.amount,0),starting=s.ledger.filter(x=>x.year<year).reduce((n,x)=>n+x.amount,0);return {year,income,expenses,net:income-expenses,opening:starting,ending:starting+income-expenses,entries}}
 
-function closeYear(s){if(s.ending||s.year>=MAX_SEASONS)throw Error("最終年度を終了しました");if(!s.race||!s.race.finished)throw Error("大会終了後に年度決算を行えます");let r=s.race,old=s.year;const scoutInvestment=s.scouting||0;/* 年間固定費は期首に全額支払済み。年度末の二重計上は禁止。 */let f=financials(s,old);s.history.push({year:old,rank:r.rank,winner:r.contestants[0].name,prediction:s.prediction?{...s.prediction}:null,standings:r.contestants.map((c,i)=>({rank:i+1,name:c.name,seconds:c.total,runners:c.splits.map(x=>({name:x.runner,seconds:x.seconds}))})),finance:{opening:f.opening,income:f.income,expenses:f.expenses,net:f.net,ending:f.ending}});const rivalRanks=Object.fromEntries(r.contestants.map((c,i)=>[c.name,i+1]));s.year++;s.week=0;s.race=null;nextRivalYear(s,rivalRanks);let graduates=s.roster.filter(x=>x.grade===4);if(!Array.isArray(s.alumni))s.alumni=[];for(const runner of graduates)s.alumni.push({id:runner.id,name:runner.name,graduationYear:old,records:{...(runner.records||{})}});s.roster=s.roster.filter(x=>x.grade<4);for(const r of s.roster){r.grade++;r.fatigue=clamp(r.fatigue-32,0,30);r.morale=clamp(r.morale+8,40,96);}let maxId=Math.max(0,...s.roster.map(x=>x.id),...graduates.map(x=>x.id));for(let i=0;i<graduates.length;i++){let newId=maxId+i+1,name=NAMES[(newId+2)%NAMES.length]+" #"+newId;const rookie=makeRunner(s,name,1,newId);
+function closeYear(s){if(s.ending||s.year>=MAX_SEASONS)throw Error("最終年度を終了しました");if(!s.race||!s.race.finished)throw Error("大会終了後に年度決算を行えます");let r=s.race,old=s.year;const scoutInvestment=s.scouting||0;ensureScouting(s);const availableProspects=s.recruitTargets.map(id=>s.prospects.find(p=>p.id===id)).filter(Boolean);const arrivals=[];/* 年間固定費は期首に全額支払済み。年度末の二重計上は禁止。 */let f=financials(s,old);s.history.push({year:old,rank:r.rank,winner:r.contestants[0].name,prediction:s.prediction?{...s.prediction}:null,standings:r.contestants.map((c,i)=>({rank:i+1,name:c.name,seconds:c.total,runners:c.splits.map(x=>({name:x.runner,seconds:x.seconds}))})),finance:{opening:f.opening,income:f.income,expenses:f.expenses,net:f.net,ending:f.ending}});const rivalRanks=Object.fromEntries(r.contestants.map((c,i)=>[c.name,i+1]));s.year++;s.week=0;s.race=null;nextRivalYear(s,rivalRanks);let graduates=s.roster.filter(x=>x.grade===4);if(!Array.isArray(s.alumni))s.alumni=[];for(const runner of graduates)s.alumni.push({id:runner.id,name:runner.name,graduationYear:old,records:{...(runner.records||{})}});s.roster=s.roster.filter(x=>x.grade<4);for(const r of s.roster){r.grade++;r.fatigue=clamp(r.fatigue-32,0,30);r.morale=clamp(r.morale+8,40,96);}let maxId=Math.max(0,...s.roster.map(x=>x.id),...graduates.map(x=>x.id));for(let i=0;i<graduates.length;i++){let newId=maxId+i+1,name=NAMES[(newId+2)%NAMES.length]+" #"+newId;const rookie=makeRunner(s,name,1,newId);
+  // A targeted high-school graduate is more likely to accept with a good recruiting reputation.
+  const applicant=availableProspects.shift();
+  if(applicant&&random(s)<.72+.06*Math.min(3,s.scouting)){
+    rookie.name=applicant.name;
+    rookie.highSchool=HIGH_SCHOOLS[applicant.schoolId].name;
+    rookie.stats={...applicant.stats};
+    rookie.talent=applicant.talent;
+    rookie.potential=applicant.potential;
+    arrivals.push(rookie.name+"（"+rookie.highSchool+"）");
+    s.roster.push(rookie);
+    continue;
+  }
   // A rare outstanding incoming first-year runner; improved discovery odds through scouting.
   const exceptional= random(s)<0.025+scoutInvestment*0.012;
   const prodigy= exceptional&&random(s)<0.22;
@@ -325,6 +403,6 @@ function closeYear(s){if(s.ending||s.year>=MAX_SEASONS)throw Error("最終年度
   rookie.talent=prodigy?"天才1年生":exceptional?"特待級ルーキー":null;
   rookie.potential=prodigy?99:exceptional?between(s,95,99):between(s,88,98);
   if(exceptional)rookie.morale=clamp(rookie.morale+between(s,3,8),0,100);
-  s.roster.push(rookie);}s.scouting=0;s.offer=null;s.prediction=null;s.lineup=s.roster.slice().sort((a,b)=>((b.stats.speed+b.stats.stamina+b.stats.hill)/3)-((a.stats.speed+a.stats.stamina+a.stats.hill)/3)).slice(0,5).map(r=>r.id);let subsidy=4000000+Math.min(500000,(s.year-1)*75000);addMoney(s,subsidy,"収入","大学からの年間部費配分");addMoney(s,450000+Math.floor(between(s,0,300000)),"収入","OB・OG会の年間活動支援");addMoney(s,-2200000,"固定費","年間運営経費（施設・保険・指導補助・用具）");const starNewcomers=s.roster.filter(x=>x.grade===1&&x.talent);s.lastLog=`${old}年度決算。${graduates.length}名卒業、新入部員が加入。`+(starNewcomers.length?` 注目の逸材：${starNewcomers.map(x=>x.name+'（'+x.talent+'）').join('、')}！`:``);return s}
+  s.roster.push(rookie);}s.scouting=0;s.scoutedSchools=[];s.recruitTargets=[];s.prospects=[];ensureScouting(s);s.offer=null;s.prediction=null;s.lineup=s.roster.slice().sort((a,b)=>((b.stats.speed+b.stats.stamina+b.stats.hill)/3)-((a.stats.speed+a.stats.stamina+a.stats.hill)/3)).slice(0,5).map(r=>r.id);let subsidy=4000000+Math.min(500000,(s.year-1)*75000);addMoney(s,subsidy,"収入","大学からの年間部費配分");addMoney(s,450000+Math.floor(between(s,0,300000)),"収入","OB・OG会の年間活動支援");addMoney(s,-2200000,"固定費","年間運営経費（施設・保険・指導補助・用具）");const starNewcomers=s.roster.filter(x=>x.grade===1&&x.talent);s.lastLog=`${old}年度決算。${graduates.length}名卒業、新入部員が加入。`+(arrivals.length?" 視察から入部："+arrivals.join("、")+"。":"")+(starNewcomers.length?` 注目の逸材：${starNewcomers.map(x=>x.name+'（'+x.talent+'）').join('、')}！`:``);return s}
 
-globalThis.EkidenEngine={MAX_SEASONS,WATER_COST,SKILLS,LEGS,SHOP,RIVALS,newGame,validate,migrateSave,ensureRivalTeams,selectRivalLineup,setLineup,buyItem,investScouting,train,startRace,stepRace,nextLeg,financials,closeYear};
+globalThis.EkidenEngine={MAX_SEASONS,WATER_COST,SCOUT_COST,HIGH_SCHOOLS,ensureScouting,visibleScouting,targetRecruit,SKILLS,LEGS,SHOP,RIVALS,newGame,validate,migrateSave,ensureRivalTeams,selectRivalLineup,setLineup,buyItem,investScouting,train,startRace,stepRace,nextLeg,financials,closeYear};
