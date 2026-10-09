@@ -1,7 +1,12 @@
 /* EKIDEN MANAGER — zero-server, no dependencies. */
 "use strict";
 (() => {
-  const E=globalThis.EkidenEngine, KEY="ekiden-manager-v1";
+  const E=globalThis.EkidenEngine, KEY="ekiden-manager-v1", LANG_KEY="ekiden-manager-language";
+  let locale="ja";
+  try{const stored=localStorage.getItem(LANG_KEY);if(["ja","en"].includes(stored))locale=stored;
+    else if(typeof navigator!=="undefined"&&/^en\\b/i.test(navigator.language||""))locale="en";
+  }catch(_e){locale="ja";}
+
   if(!E){document.getElementById("app").textContent="ゲームの読み込みに失敗しました。";return;}
   const yen=n=>"¥"+Math.round(n).toLocaleString("ja-JP");
   const dec=n=>Number(n).toFixed(1);
@@ -186,16 +191,25 @@
 
   function render(){
     const root=document.getElementById("app");
-    root.innerHTML='<div class="wrap"><header class="top"><div><div class="eyebrow">University long-distance strategy</div><h1 class="brand">EKIDEN <span class="accent">MANAGER</span></h1><div class="sub">栄光への襷 — 育成 × レース戦術 × 部費経営</div></div><span class="tag">OFFLINE ALPHA v0.6.0</span></header>'+
+    root.innerHTML='<div class="wrap"><header class="top"><div><div class="eyebrow">University long-distance strategy</div><h1 class="brand">EKIDEN <span class="accent">MANAGER</span></h1><div class="sub">栄光への襷 — 育成 × レース戦術 × 部費経営</div></div><div class="language-switch" role="group" aria-label="表示言語 / Display language"><button type="button" class="btn small ghost language-button" data-action="locale" data-lang="ja" aria-pressed="'+(locale==="ja")+'">日本語</button><button type="button" class="btn small ghost language-button" data-action="locale" data-lang="en" aria-pressed="'+(locale==="en")+'">English</button><span class="tag">OFFLINE ALPHA v0.7.0 · JP/EN</span></div></header>'+
       statsCards()+'<div class="notice">'+esc(flash||state.lastLog)+'</div><div class="layout"><div>'+
       (state.week<12&&!state.race&&!state.ending?highSchoolRecruitment():'')+(state.week>=12&&!state.race&&!state.ending?predictionMarket():'')+racing()+training()+(state.week>=12||!!state.race?highSchoolRecruitment():'')+schoolEvents()+lineup()+runners()+'</div><aside>'+tutorial()+(state.week>=12&&!state.race&&!state.ending?'':predictionMarket())+finance()+store()+rivalDashboard()+history()+'</aside></div>'+
       '<footer class="footer"><div>ゲームの選手・大学・財務は架空設定です。結果は乱数シードで再現可能です。</div><div class="flex"><button class="btn small ghost" data-action="export">セーブ書き出し</button><button class="btn small ghost" data-action="import">セーブ読込</button><button class="btn small danger" data-action="reset">最初から</button><input type="file" id="savefile" accept=".json,application/json" hidden/></div></footer></div>';
+    const root2=document.getElementById("app");
+    if(globalThis.EkidenI18n&&root2&&root2.ownerDocument)globalThis.EkidenI18n.localize(root2,locale);
   }
   function execute(fn){flash="";const checkpoint=JSON.stringify(state);try{fn();E.validate(state);persist();}catch(e){state=JSON.parse(checkpoint);flash="操作できませんでした："+e.message;}render();}
   function exportSave(){const data=JSON.stringify(state,null,2),blob=new Blob([data],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="ekiden-manager-year-"+state.year+".json";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   document.addEventListener("click",event=>{
     const button=event.target.closest("[data-action]");if(!button||button.disabled)return;
     const action=button.dataset.action;
+    if(action==="locale"){
+      const next=button.dataset.lang;
+      if(!["ja","en"].includes(next))return;
+      locale=next;
+      try{localStorage.setItem(LANG_KEY,locale);}catch(_e){}
+      render();return;
+    }
     if(action==="export"){exportSave();return;}
     if(action==="import"){document.getElementById("savefile").click();return;}
     if(action==="reset"){if(confirm("今の進行状況を消し、初年度から始めますか？ セーブ書き出しを推奨します。")){state=E.newGame(seed());persist();render();}return;}
