@@ -22,7 +22,7 @@ function createUiHarness(){
   return {
     get markup(){return markup;},
     get state(){return JSON.parse(saved.get("ekiden-manager-v1"));},
-    click(action,key){assert.ok(handlers.click,"click handler registered");handlers.click({target:{closest:()=>({disabled:false,dataset:{action,key}})}});},
+    click(action,key){assert.ok(handlers.click,"click handler registered");handlers.click({target:{closest:()=>({disabled:false,dataset:{action,key,id:key}})}});},
     setField(id,value){fields[id]=value;},
     engine:global.EkidenEngine
   };
@@ -34,8 +34,17 @@ test("training, scouting, checkpoint map, year-end accounting, and autosave run 
   assert.match(app.markup,/年度決算/);
   assert.match(app.markup,/監督手帳/);
   assert.match(app.markup,/ライバル大学の偵察/);
+  assert.match(app.markup,/全国高校スカウト/);
+  assert.match(app.markup,/40校/);
+  app.setField("scout-school","3");
   app.click("scout");
   assert.equal(app.state.scouting,1);
+  assert.deepEqual(app.state.scoutedSchools,[3]);
+  assert.ok(app.state.prospects.filter(p=>p.schoolId===3).length>=2);
+  assert.match(app.markup,/入部打診/);
+  const select=app.state.prospects.find(p=>p.schoolId===3);
+  app.click("target",select.id);
+  assert.deepEqual(app.state.recruitTargets,[select.id]);
   assert.equal(app.state.cash,2220000);
   for(let w=0;w<12;w++)app.click("train");
   assert.equal(app.state.week,12);
