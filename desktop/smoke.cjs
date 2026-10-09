@@ -36,6 +36,17 @@ async function run(){
   await win.loadFile(path.join(__dirname,"..","index.html"));
   assert.match(await query("document.body.innerText"),/EKIDEN MANAGER/);
   await screenshot("01-start");
+  const originalRng=await query("JSON.parse(localStorage.getItem('ekiden-manager-v1')).rng");
+  assert.equal(await query("document.documentElement.lang"),"ja");
+  await query("document.querySelector('[data-action=locale][data-lang=en]').click()");
+  assert.equal(await query("document.documentElement.lang"),"en");
+  assert.match(await query("document.body.innerText"),/High School Scouting Network/);
+  assert.match(await query("document.body.innerText"),/Big-stage Poise/);
+  assert.equal(await query("JSON.parse(localStorage.getItem('ekiden-manager-v1')).rng"),originalRng);
+  await screenshot("01-english-ekiden-not-soccer");
+  await query("document.querySelector('[data-action=locale][data-lang=ja]').click()");
+  assert.equal(await query("document.documentElement.lang"),"ja");
+  assert.match(await query("document.body.innerText"),/全国高校スカウト/);
   assert.equal(await query("document.querySelectorAll('#scout-school option').length"),40);
   await query("(()=>{const x=document.getElementById('scout-school');x.value='3';return x.value})()");
   await click("scout");
