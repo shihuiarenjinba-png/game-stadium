@@ -17,7 +17,7 @@ function clamp(n,lo,hi){return Math.max(lo,Math.min(hi,n))}
 
 function addMoney(s,amount,kind,label){if(amount<0 && s.cash+amount<0)throw Error("部費残高が不足しています");s.cash+=amount;s.ledger.push({year:s.year,week:s.week,amount,kind,label});}
 
-function makeRunner(s,name,grade,id){let level=54+grade*4+(grade===1?Math.min(14,(s.year-1)*3.3):0)+between(s,-5,9);let x={id,name,grade,fatigue:between(s,6,18),morale:between(s,60,86),traits:{clutch:between(s,0,1),hill:between(s,-5,5)},stats:{}};for(const k of SKILLS)x.stats[k]=Math.round(clamp(level+between(s,-7,7),35,90)*10)/10;return x}
+function makeRunner(s,name,grade,id){let level=54+grade*4+(grade===1?Math.min(14,(s.year-1)*3.3):0)+between(s,-5,9);let x={id,name,grade,fatigue:between(s,6,18),morale:between(s,60,86),traits:{clutch:between(s,0,1),hill:between(s,-5,5),consistency:Math.round(between(s,30,92)),stage:Math.round(between(s,12,96))},stats:{}};for(const k of SKILLS)x.stats[k]=Math.round(clamp(level+between(s,-7,7),35,90)*10)/10;return x}
 
 
 const HIGH_SCHOOLS=["北浜","青葉","栄明","桜野","海東","西丘","若松","山ノ手","翠嶺","東海","白鷺","光陵","玄海","南翔","北都","成和","旭ヶ丘","中岳","清流","東雲","啓星","潮見","明星","金嶺","富嶽","竹原","松風","陽南","久遠","北原","彩雲","瑞穂","湘明","日高","常盤","優駿","蒼山","南風","鶴見","朝凪"].map((name,i)=>({id:i,name:name+"高等学校",region:["北日本","東日本","中日本","西日本","南日本"][i%5],style:["速度型","登坂型","持久型","総合型"][i%4]}));
@@ -88,7 +88,7 @@ function validate(s){
       throw Error("選手データが不正です");
     ids.add(r.id);
     for(const skill of SKILLS)if(!Number.isFinite(r.stats[skill])||r.stats[skill]<0||r.stats[skill]>100)throw Error("能力値が不正です");
-    if(!Number.isFinite(r.fatigue)||r.fatigue<0||r.fatigue>100||!Number.isFinite(r.morale)||r.morale<0||r.morale>100||!Number.isFinite(r.traits?.clutch))throw Error("選手コンディションが不正です");
+    if(!Number.isFinite(r.fatigue)||r.fatigue<0||r.fatigue>100||!Number.isFinite(r.morale)||r.morale<0||r.morale>100||!Number.isFinite(r.traits?.clutch))throw Error("選手コンディションが不正です");if(["consistency","stage"].some(k=>r.traits[k]!==undefined&&(!Number.isInteger(r.traits[k])||r.traits[k]<0||r.traits[k]>100)))throw Error("心理特性が不正です");
   }
   if(new Set(s.lineup).size!==5||s.lineup.some(id=>!ids.has(id)))throw Error("区間配置が不正です");
   let balance=0;
@@ -137,17 +137,18 @@ function migrateSave(s){
   if(s.ending===undefined)s.ending=null;
   if(!Array.isArray(s.alumni))s.alumni=[];
   if(!Array.isArray(s.events))s.events=[];
-  for(const r of s.roster){if(!Number.isInteger(r.focusLoss))r.focusLoss=0;if(!Number.isInteger(r.focusBoost))r.focusBoost=0;}
+  for(const r of s.roster){if(!Number.isInteger(r.focusLoss))r.focusLoss=0;if(!Number.isInteger(r.focusBoost))r.focusBoost=0;if(!Number.isInteger(r.traits.consistency))r.traits.consistency=60;if(!Number.isInteger(r.traits.stage))r.traits.stage=55;}
   if(s.items&&s.items.elite===undefined)s.items.elite=0;
   ensureScouting(s);
   ensureRivalTeams(s);
+  for(const team of s.rivalTeams)for(const r of team.roster){if(!Number.isInteger(r.consistency))r.consistency=60;if(!Number.isInteger(r.stage))r.stage=55;}
   for(const team of s.rivalTeams)if(!Number.isSafeInteger(team.finance.opening))team.finance.opening=team.cash-team.finance.income+team.finance.expenses;
   if(s.race){
     if(!Number.isInteger(s.race.segment))s.race.segment=0;
     if(!s.race.finished)for(const c of s.race.contestants)if(!c.human&&!Array.isArray(c.runners)){
       const known=RIVALS.find(x=>x.name===c.name);
       if(!known)throw Error("旧版セーブデータの対戦相手を復元できません");
-      const team=s.rivalTeams.find(t=>t.name===known.name);c.runners=team.lineup.map(id=>{const r=team.roster.find(x=>x.id===id);return {id:r.id,name:r.name,grade:r.grade,stats:{...r.stats},morale:r.morale,fatigue:r.fatigue,clutch:r.clutch};});
+      const team=s.rivalTeams.find(t=>t.name===known.name);c.runners=team.lineup.map(id=>{const r=team.roster.find(x=>x.id===id);return {id:r.id,name:r.name,grade:r.grade,stats:{...r.stats},morale:r.morale,fatigue:r.fatigue,clutch:r.clutch,consistency:r.consistency??60,stage:r.stage??55};});
     }
     if(typeof s.race.rainProtection!=="boolean")s.race.rainProtection=false;
   }
@@ -199,6 +200,16 @@ function weeklySurprise(s){
 }
 function train(s,focus="stamina",intensity="normal"){if(s.race)throw Error("大会開催中です");if(s.week>=12)throw Error("練習期間が終了しました。大会へ進んでください");if(!SKILLS.includes(focus))throw Error("能力値が不正です");if(!["light","normal","hard"].includes(intensity))throw Error("練習強度が不正です");let cost={light:38000,normal:72000,hard:110000}[intensity], factor={light:0.65,normal:1,hard:1.35}[intensity],fatigue={light:2,normal:6,hard:12}[intensity];if(s.cash-cost<480000+(11-s.week)*38000)throw Error("残りの最低練習費と大会遠征費を確保してください");addMoney(s,-cost,"練習費",["調整練習","通常練習","高強度練習"][["light","normal","hard"].indexOf(intensity)]);let camp=s.items.camp>0,science=s.items.science>0,elite=(s.items.elite||0)>0;if(camp)s.items.camp--;if(science)s.items.science--;if(elite)s.items.elite--;let lucky=0,breakdowns=0;for(const r of s.roster){const selected=s.lineup.includes(r.id);let gain=between(s,1.25,1.95)*factor*(0.8+r.stats.recovery/380);if(selected&&camp)gain*=2;if(selected&&science)gain*=1.35;if(selected&&elite)gain*=1.6;if(r.focusLoss>0)gain*=0.53;if(r.focusBoost>0)gain*=1.35;if(random(s)<0.055 && r.fatigue<55){gain*=2;lucky++;}gain*=r.fatigue>75?0.62:1;r.stats[focus]=Math.round(clamp(r.stats[focus]+gain,0,99)*10)/10;r.fatigue=clamp(r.fatigue+fatigue+(selected&&camp?5:0)+(selected&&elite?4:0)-between(s,1,4)-r.stats.recovery/85,0,100);r.morale=clamp(r.morale+between(s,-3,2),15,100);if(r.fatigue>83&&random(s)<0.15){r.fatigue=clamp(r.fatigue+8,0,100);r.morale=clamp(r.morale-8,0,100);breakdowns++;}if(r.focusLoss>0)r.focusLoss--;if(r.focusBoost>0)r.focusBoost--;}rivalTraining(s);s.week++;if(s.offer && s.week>s.offer.expires)s.offer=null;let newInvite=false;if(s.week<12&&!s.offer&&random(s)<0.055){s.offer={expires:Math.min(11,s.week+2)};newInvite=true;}s.lastLog=`第${s.week}週：${focus}を強化。`+(camp?" 強化合宿の成長2倍が発動。":"")+(science?" 科学測定の成長1.35倍が発動。":"")+(elite?" 全国強化プログラムの成長1.6倍が発動（残り"+s.items.elite+"回）。":"")+(lucky?` ${lucky}名が好調で成長2倍。`:"")+(breakdowns?` ${breakdowns}名が疲労でコンディション悪化。`:"")+(newInvite?" 合同合宿の招待枠が届いた！期限内なら参加費を節約できます。":"");const surprise=weeklySurprise(s);if(surprise)s.lastLog+=" 【イベント】"+surprise.headline+"："+surprise.detail;return s}
 
+// These coefficients are fictional game balancing, not sports medicine.
+function pressureOutcome(s,runner){
+ const grit=runner.stats.grit,stage=clamp(runner.stage??55,0,100),stable=clamp(runner.consistency??60,0,100);
+ const chokeChance=clamp(.025+(100-stage)*.0017+(100-runner.morale)*.00045-(grit-50)*.00023,.012,.23);
+ const flowChance=clamp(.045+stage*.00065+(runner.morale-65)*.0004,.04,.13);
+ const roll=random(s),state=roll<chokeChance?"choke":roll<chokeChance+flowChance?"flow":"steady";
+ const swing=state==="choke"?between(s,7,14):state==="flow"?-between(s,4,9):0;
+ const noise=normal(s)*(1.4+(100-stable)*.055);
+ return {state,pacePenalty:Math.round((swing+noise)*10)/10,chokeChance:Math.round(chokeChance*1000)/10,flowChance:Math.round(flowChance*1000)/10};
+}
 function paceFor(stats,hillIndex,gritBoost){return 270.5-0.355*stats.speed-0.245*stats.stamina-(hillIndex===1?0.205:hillIndex===3?0.055:0.115)*stats.hill-0.13*(stats.grit+gritBoost)}
 
 function startRace(s){if(s.race)throw Error("すでに大会が始まっています");if(s.week<12)throw Error("12週の練習を終えてください");const schools=ensureRivalTeams(s);for(const team of schools)team.lineup=selectRivalLineup(team);
@@ -223,7 +234,7 @@ function makeRivalAthlete(s,team,grade,id){
     const focus=SKILLS[Math.floor(random(s)*SKILLS.length)];
     for(const key of SKILLS)stats[key]=Math.round(clamp(stats[key]+(focus===key?between(s,17,24):between(s,5,11)),35,99)*10)/10;
   }
-  return {id,name:CPU_SURNAMES[(id*7+team.index*3)%CPU_SURNAMES.length]+" "+CPU_GIVEN[(id+team.index*5)%CPU_GIVEN.length],grade,stats,clutch:between(s,0,1),morale:between(s,68,90),fatigue:between(s,5,25),talent:exceptional?"特待級ルーキー":null};
+  return {id,name:CPU_SURNAMES[(id*7+team.index*3)%CPU_SURNAMES.length]+" "+CPU_GIVEN[(id+team.index*5)%CPU_GIVEN.length],grade,stats,clutch:between(s,0,1),consistency:Math.round(between(s,32,92)),stage:Math.round(between(s,15,95)),morale:between(s,68,90),fatigue:between(s,5,25),talent:exceptional?"特待級ルーキー":null};
 }
 function selectRivalLineup(team){
   const remaining=[...team.roster],chosen=[];
@@ -302,9 +313,9 @@ function stepRace(s,stance="steady",water=0){
   if(water>0){addMoney(s,-water*WATER_COST,"大会給水費","第"+(leg+1)+"区・"+(segment+1)+"地点：給水"+water+"杯");race.waterSpent=(race.waterSpent||0)+water*WATER_COST;race.waterCups=(race.waterCups||0)+water;}
   const notes=[];
   for(const c of race.contestants){
-    const runner=c.human?{...athlete,clutch:athlete.traits.clutch}:c.runners[leg];
+    const runner=c.human?{...athlete,clutch:athlete.traits.clutch,consistency:athlete.traits.consistency,stage:athlete.traits.stage}:c.runners[leg];
     const {stats,morale,fatigue,grade,clutch}=runner;
-    if(segment===0){c.energy=clamp(68+0.30*stats.stamina-0.20*fatigue,55,98);c.legForm=normal(s)*5.2;c.legSeconds=0;c.legBonus=grade===4&&random(s)<0.36?(1.5+3.2*clutch):0;c.hydration=62;c.stomach=0;}
+    if(segment===0){c.energy=clamp(68+0.30*stats.stamina-0.20*fatigue,55,98);c.legForm=normal(s)*5.2;c.legSeconds=0;c.legBonus=grade===4&&random(s)<0.36?(1.5+3.2*clutch):0;c.hydration=62;c.stomach=0;const m=pressureOutcome(s,runner);c.mentalOutcome=m.state;c.mentalPace=m.pacePenalty;c.chokeChance=m.chokeChance;c.flowChance=m.flowChance;}
     const tacticalStance=c.human?stance:raceStrategy(s,c,segment);
     const staminaBefore=c.energy;
     const spent=tacticalStance==="push"?32:tacticalStance==="save"?13:21;
@@ -312,7 +323,7 @@ function stepRace(s,stance="steady",water=0){
     const lowEnergy=Math.max(0,39-staminaBefore);
     const energyPenalty=lowEnergy*0.36+(tacticalStance==="push"?Math.max(0,48-staminaBefore)*0.28:0);
     const tiredPenalty=fatigue>48?(fatigue-48)*0.15:0;
-    const moralePenalty=(75-morale)*0.09;
+    const moralePenalty=(75-morale)*(0.12+(100-(runner.consistency??60))*.0007);
     const weatherPenalty=rain?3.0:0;
     const rainKit=c.human&&race.rainProtection&&rain?0.35:1;
     const senior=c.legBonus*(c.human?1:0.85);
@@ -326,15 +337,15 @@ function stepRace(s,stance="steady",water=0){
     const waterPenalty=dehydrationPenalty+stomachPenalty;
     const randomSegment=normal(s)*2.6;
     const badEvent=random(s)<0.015?between(s,5,12):0;
-    const pace=clamp(paceFor(stats,leg,senior)+c.legForm+randomSegment+speedBonus+energyPenalty+tiredPenalty+moralePenalty+weatherPenalty*rainKit+badEvent+waterPenalty,176,290);
+    const pace=clamp(paceFor(stats,leg,senior)+c.legForm+randomSegment+speedBonus+energyPenalty+tiredPenalty+moralePenalty+weatherPenalty*rainKit+badEvent+waterPenalty+(c.mentalPace||0),176,290);
     const seconds=Math.round(distance*pace);
     if(segment===0)c.splits.push({seconds:0,runner:c.human?athlete.name:runner.name,pace:0,seniorBonus:Math.round(senior*10)/10,dayNoise:Math.round(c.legForm*10)/10,partials:[]});
     const split=c.splits[leg];
-    split.partials.push({section:segment+1,seconds,pace:Math.round(pace*10)/10,stance:tacticalStance,waterCups:cups,hydration:Math.round(c.hydration),stomach:Math.round(c.stomach),waterPenalty:Math.round(waterPenalty*10)/10,energyBefore:Math.round(staminaBefore),energyAfter:Math.round(Math.max(0,staminaBefore-spent))});
+    split.partials.push({section:segment+1,seconds,pace:Math.round(pace*10)/10,stance:tacticalStance,mentalOutcome:c.mentalOutcome||"steady",mentalPenalty:c.mentalPace||0,waterCups:cups,hydration:Math.round(c.hydration),stomach:Math.round(c.stomach),waterPenalty:Math.round(waterPenalty*10)/10,energyBefore:Math.round(staminaBefore),energyAfter:Math.round(Math.max(0,staminaBefore-spent))});
     split.seconds+=seconds;split.pace=Math.round(split.seconds/course.km*10)/10;
     c.total+=seconds;c.legSeconds+=seconds;c.energy=Math.max(0,staminaBefore-spent);c.hydration=Math.max(0,c.hydration-(rain?18:23));
     if(c.human){
-      if(c.legBonus>0&&segment===0)notes.push(athlete.name+"（4年）の粘りが光る");
+      if(c.legBonus>0&&segment===0)notes.push(athlete.name+"（4年）の粘りが光る");if(segment===0&&c.mentalOutcome==="choke")notes.push(athlete.name+"が大舞台の緊張で本来のペースを失う");if(segment===0&&c.mentalOutcome==="flow")notes.push(athlete.name+"が大舞台で集中力を発揮");
       if(c.legForm<-5&&segment===0)notes.push(athlete.name+"が絶好調");
       if(lowEnergy>15)notes.push(athlete.name+"のスタミナが厳しい");if(dehydrationPenalty>3)notes.push(athlete.name+"が水分不足で失速");if(stomachPenalty>3)notes.push(athlete.name+"がお腹タポタポで失速");if(water===1&&dehydrationPenalty<1&&stomachPenalty<1)notes.push("的確な給水で快走");
     }else if(badEvent>0)notes.push(c.name+"に失速");
@@ -405,4 +416,4 @@ function closeYear(s){if(s.ending||s.year>=MAX_SEASONS)throw Error("最終年度
   if(exceptional)rookie.morale=clamp(rookie.morale+between(s,3,8),0,100);
   s.roster.push(rookie);}s.scouting=0;s.scoutedSchools=[];s.recruitTargets=[];s.prospects=[];ensureScouting(s);s.offer=null;s.prediction=null;s.lineup=s.roster.slice().sort((a,b)=>((b.stats.speed+b.stats.stamina+b.stats.hill)/3)-((a.stats.speed+a.stats.stamina+a.stats.hill)/3)).slice(0,5).map(r=>r.id);let subsidy=4000000+Math.min(500000,(s.year-1)*75000);addMoney(s,subsidy,"収入","大学からの年間部費配分");addMoney(s,450000+Math.floor(between(s,0,300000)),"収入","OB・OG会の年間活動支援");addMoney(s,-2200000,"固定費","年間運営経費（施設・保険・指導補助・用具）");const starNewcomers=s.roster.filter(x=>x.grade===1&&x.talent);s.lastLog=`${old}年度決算。${graduates.length}名卒業、新入部員が加入。`+(arrivals.length?" 視察から入部："+arrivals.join("、")+"。":"")+(starNewcomers.length?` 注目の逸材：${starNewcomers.map(x=>x.name+'（'+x.talent+'）').join('、')}！`:``);return s}
 
-globalThis.EkidenEngine={MAX_SEASONS,WATER_COST,SCOUT_COST,HIGH_SCHOOLS,ensureScouting,visibleScouting,targetRecruit,SKILLS,LEGS,SHOP,RIVALS,newGame,validate,migrateSave,ensureRivalTeams,selectRivalLineup,setLineup,buyItem,investScouting,train,startRace,stepRace,nextLeg,financials,closeYear};
+globalThis.EkidenEngine={pressureOutcome,MAX_SEASONS,WATER_COST,SCOUT_COST,HIGH_SCHOOLS,ensureScouting,visibleScouting,targetRecruit,SKILLS,LEGS,SHOP,RIVALS,newGame,validate,migrateSave,ensureRivalTeams,selectRivalLineup,setLineup,buyItem,investScouting,train,startRace,stepRace,nextLeg,financials,closeYear};
