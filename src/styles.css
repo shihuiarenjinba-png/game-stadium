@@ -71,3 +71,5 @@
 .mental-live{font-weight:700;color:#e9cc9c;margin:8px 0;padding:8px 10px;border-left:3px solid #e4be75;background:#223840;border-radius:6px}
 .num.mental{font-variant-numeric:tabular-nums;color:#d8eab4}
 @media(max-width:680px){.language-switch{width:100%;justify-content:flex-start}.language-switch .tag{font-size:11px}}
+
+.mini.pressure{color:#f0d38d;font-weight:700;white-space:normal;font-size:10px;margin:3px 0}
