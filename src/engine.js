@@ -201,10 +201,15 @@ function weeklySurprise(s){
 function train(s,focus="stamina",intensity="normal"){if(s.race)throw Error("大会開催中です");if(s.week>=12)throw Error("練習期間が終了しました。大会へ進んでください");if(!SKILLS.includes(focus))throw Error("能力値が不正です");if(!["light","normal","hard"].includes(intensity))throw Error("練習強度が不正です");let cost={light:38000,normal:72000,hard:110000}[intensity], factor={light:0.65,normal:1,hard:1.35}[intensity],fatigue={light:2,normal:6,hard:12}[intensity];if(s.cash-cost<480000+(11-s.week)*38000)throw Error("残りの最低練習費と大会遠征費を確保してください");addMoney(s,-cost,"練習費",["調整練習","通常練習","高強度練習"][["light","normal","hard"].indexOf(intensity)]);let camp=s.items.camp>0,science=s.items.science>0,elite=(s.items.elite||0)>0;if(camp)s.items.camp--;if(science)s.items.science--;if(elite)s.items.elite--;let lucky=0,breakdowns=0;for(const r of s.roster){const selected=s.lineup.includes(r.id);let gain=between(s,1.25,1.95)*factor*(0.8+r.stats.recovery/380);if(selected&&camp)gain*=2;if(selected&&science)gain*=1.35;if(selected&&elite)gain*=1.6;if(r.focusLoss>0)gain*=0.53;if(r.focusBoost>0)gain*=1.35;if(random(s)<0.055 && r.fatigue<55){gain*=2;lucky++;}gain*=r.fatigue>75?0.62:1;r.stats[focus]=Math.round(clamp(r.stats[focus]+gain,0,99)*10)/10;r.fatigue=clamp(r.fatigue+fatigue+(selected&&camp?5:0)+(selected&&elite?4:0)-between(s,1,4)-r.stats.recovery/85,0,100);r.morale=clamp(r.morale+between(s,-3,2),15,100);if(r.fatigue>83&&random(s)<0.15){r.fatigue=clamp(r.fatigue+8,0,100);r.morale=clamp(r.morale-8,0,100);breakdowns++;}if(r.focusLoss>0)r.focusLoss--;if(r.focusBoost>0)r.focusBoost--;}rivalTraining(s);s.week++;if(s.offer && s.week>s.offer.expires)s.offer=null;let newInvite=false;if(s.week<12&&!s.offer&&random(s)<0.055){s.offer={expires:Math.min(11,s.week+2)};newInvite=true;}s.lastLog=`第${s.week}週：${focus}を強化。`+(camp?" 強化合宿の成長2倍が発動。":"")+(science?" 科学測定の成長1.35倍が発動。":"")+(elite?" 全国強化プログラムの成長1.6倍が発動（残り"+s.items.elite+"回）。":"")+(lucky?` ${lucky}名が好調で成長2倍。`:"")+(breakdowns?` ${breakdowns}名が疲労でコンディション悪化。`:"")+(newInvite?" 合同合宿の招待枠が届いた！期限内なら参加費を節約できます。":"");const surprise=weeklySurprise(s);if(surprise)s.lastLog+=" 【イベント】"+surprise.headline+"："+surprise.detail;return s}
 
 // These coefficients are fictional game balancing, not sports medicine.
+function mentalRisk(runner){
+ const grit=runner.stats.grit,stage=clamp(runner.stage??55,0,100);
+ const choke=clamp(.025+(100-stage)*.0017+(100-runner.morale)*.00045-(grit-50)*.00023,.012,.23);
+ const flow=clamp(.045+stage*.00065+(runner.morale-65)*.0004,.04,.13);
+ return {choke:Math.round(choke*1000)/10,flow:Math.round(flow*1000)/10};
+}
 function pressureOutcome(s,runner){
- const grit=runner.stats.grit,stage=clamp(runner.stage??55,0,100),stable=clamp(runner.consistency??60,0,100);
- const chokeChance=clamp(.025+(100-stage)*.0017+(100-runner.morale)*.00045-(grit-50)*.00023,.012,.23);
- const flowChance=clamp(.045+stage*.00065+(runner.morale-65)*.0004,.04,.13);
+ const stable=clamp(runner.consistency??60,0,100);
+ const chance=mentalRisk(runner),chokeChance=chance.choke/100,flowChance=chance.flow/100;
  const roll=random(s),state=roll<chokeChance?"choke":roll<chokeChance+flowChance?"flow":"steady";
  const swing=state==="choke"?between(s,7,14):state==="flow"?-between(s,4,9):0;
  const noise=normal(s)*(1.4+(100-stable)*.055);
@@ -416,4 +421,4 @@ function closeYear(s){if(s.ending||s.year>=MAX_SEASONS)throw Error("最終年度
   if(exceptional)rookie.morale=clamp(rookie.morale+between(s,3,8),0,100);
   s.roster.push(rookie);}s.scouting=0;s.scoutedSchools=[];s.recruitTargets=[];s.prospects=[];ensureScouting(s);s.offer=null;s.prediction=null;s.lineup=s.roster.slice().sort((a,b)=>((b.stats.speed+b.stats.stamina+b.stats.hill)/3)-((a.stats.speed+a.stats.stamina+a.stats.hill)/3)).slice(0,5).map(r=>r.id);let subsidy=4000000+Math.min(500000,(s.year-1)*75000);addMoney(s,subsidy,"収入","大学からの年間部費配分");addMoney(s,450000+Math.floor(between(s,0,300000)),"収入","OB・OG会の年間活動支援");addMoney(s,-2200000,"固定費","年間運営経費（施設・保険・指導補助・用具）");const starNewcomers=s.roster.filter(x=>x.grade===1&&x.talent);s.lastLog=`${old}年度決算。${graduates.length}名卒業、新入部員が加入。`+(arrivals.length?" 視察から入部："+arrivals.join("、")+"。":"")+(starNewcomers.length?` 注目の逸材：${starNewcomers.map(x=>x.name+'（'+x.talent+'）').join('、')}！`:``);return s}
 
-globalThis.EkidenEngine={pressureOutcome,MAX_SEASONS,WATER_COST,SCOUT_COST,HIGH_SCHOOLS,ensureScouting,visibleScouting,targetRecruit,SKILLS,LEGS,SHOP,RIVALS,newGame,validate,migrateSave,ensureRivalTeams,selectRivalLineup,setLineup,buyItem,investScouting,train,startRace,stepRace,nextLeg,financials,closeYear};
+globalThis.EkidenEngine={mentalRisk,pressureOutcome,MAX_SEASONS,WATER_COST,SCOUT_COST,HIGH_SCHOOLS,ensureScouting,visibleScouting,targetRecruit,SKILLS,LEGS,SHOP,RIVALS,newGame,validate,migrateSave,ensureRivalTeams,selectRivalLineup,setLineup,buyItem,investScouting,train,startRace,stepRace,nextLeg,financials,closeYear};
