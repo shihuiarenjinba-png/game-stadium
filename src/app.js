@@ -233,5 +233,6 @@
     const file=event.target.files[0];if(!file)return;
     file.text().then(text=>{if(text.length>8*1024*1024)throw Error("セーブファイルが大きすぎます");const imported=E.migrateSave(JSON.parse(text));state=imported;flash="セーブデータを読み込みました。";persist();render();}).catch(e=>{flash="読込失敗："+e.message;render()});
   });
-  render();
+  // Persist new-career seed before a language-only change.
+  persist();render();
 })();
