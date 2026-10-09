@@ -36,7 +36,12 @@ async function run(){
   await win.loadFile(path.join(__dirname,"..","index.html"));
   assert.match(await query("document.body.innerText"),/EKIDEN MANAGER/);
   await screenshot("01-start");
+  assert.equal(await query("document.querySelectorAll('#scout-school option').length"),40);
+  await query("(()=>{const x=document.getElementById('scout-school');x.value='3';return x.value})()");
   await click("scout");
+  assert.equal(await query("JSON.parse(localStorage.getItem('ekiden-manager-v1')).scoutedSchools.includes(3)"),true);
+  assert.ok(await query("document.querySelectorAll('[data-action=target]').length")>=2);
+  await screenshot("01-scout-high-school");
   for(let i=0;i<12;i++)await click("train");
   const week=await query("JSON.parse(localStorage.getItem('ekiden-manager-v1')).week");
   assert.equal(week,12);
