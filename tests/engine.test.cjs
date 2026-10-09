@@ -377,3 +377,65 @@ test("old in-progress saves migrate to hydration and event defaults",()=>{
   G.startRace(old);delete old.race.waterSpent;delete old.race.waterCups;
   G.migrateSave(old);G.validate(old);G.stepRace(old,"steady",0);G.validate(old);
 });
+
+test("forty fictional high schools hide gifted prospects until a paid school-specific scout visit",()=>{
+ const G=globalThis.EkidenEngine;
+ const s=G.newGame(609);
+ const board=G.visibleScouting(s);
+ assert.ok(G.HIGH_SCHOOLS.length>=40);
+ assert.ok(board.every(h=>!h.scouted&&h.prospects.length===0));
+ assert.ok(s.prospects.length>=80,"prospects must be dispersed across many schools");
+ const money=s.cash;
+ G.investScouting(s,5);
+ assert.equal(s.cash,money-G.SCOUT_COST);
+ assert.equal(s.ledger.at(-1).label,G.HIGH_SCHOOLS[5].name+"の視察・交通・調査費");
+ const known=G.visibleScouting(s);
+ assert.ok(known[5].prospects.length>=2);
+ assert.equal(known.filter(h=>h.scouted).length,1);
+ assert.throws(()=>G.investScouting(s,5),/既に調査/);
+ assert.throws(()=>G.targetRecruit(s,s.prospects.find(p=>p.schoolId!==5).id),/未調査/);
+ const p=known[5].prospects[0];
+ G.targetRecruit(s,p.id);
+ assert.deepEqual(s.recruitTargets,[p.id]);
+ G.targetRecruit(s,p.id);
+ assert.equal(s.recruitTargets.length,0);
+ G.validate(s);
+});
+test("targeted recruits can join at annual rollover and scouting remains budget and season limited",()=>{
+ const G=globalThis.EkidenEngine;
+ let joined=0;
+ for(let seed=1;seed<=80;seed++){
+  const s=G.newGame(seed);
+  G.investScouting(s,0);
+  const p=G.visibleScouting(s)[0].prospects[0];
+  G.targetRecruit(s,p.id);
+  for(let w=0;w<12;w++)G.train(s,"stamina","light");
+  assert.throws(()=>G.investScouting(s,1),/練習期間/);
+  G.startRace(s);for(let k=0;k<5;k++)G.nextLeg(s);
+  G.closeYear(s);
+  const student=s.roster.find(r=>r.grade===1&&r.name===p.name&&r.highSchool===G.HIGH_SCHOOLS[0].name);
+  if(student)joined++;
+  assert.equal(G.visibleScouting(s).filter(x=>x.scouted).length,0);
+  assert.equal(s.scouting,0);
+  G.validate(s);
+ }
+ assert.ok(joined>40,"visited talent should sometimes accept while not being guaranteed");
+ const t=G.newGame(188);
+ for(const id of [1,2,3])G.investScouting(t,id);
+ assert.throws(()=>G.investScouting(t,4),/最大3回/);
+ assert.equal(t.scouting,3);
+ assert.equal(t.ledger.filter(x=>x.kind==="採用・勧誘費").reduce((n,r)=>n-r.amount,0),3*G.SCOUT_COST);
+});
+test("there are truly hidden special recruits in multiple high schools without guaranteed discoveries",()=>{
+ let stars=0,schools=new Set(),emptyVisits=0;
+ const G=globalThis.EkidenEngine;
+ for(let seed=1;seed<=130;seed++){
+  const s=G.newGame(seed);
+  const pool=s.prospects.filter(p=>p.talent);
+  stars+=pool.length;for(const p of pool)schools.add(p.schoolId);
+  G.investScouting(s,seed%40);
+  if(!G.visibleScouting(s).find(x=>x.id===seed%40).prospects.some(p=>p.talent))emptyVisits++;
+ }
+ assert.ok(stars>100&&schools.size>=25);
+ assert.ok(emptyVisits>60,"scouting is a risk, not a fixed star purchase");
+});
