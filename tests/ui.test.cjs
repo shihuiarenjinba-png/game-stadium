@@ -22,7 +22,8 @@ function createUiHarness(){
   return {
     get markup(){return markup;},
     get state(){return JSON.parse(saved.get("ekiden-manager-v1"));},
-    click(action,key){assert.ok(handlers.click,"click handler registered");handlers.click({target:{closest:()=>({disabled:false,dataset:{action,key,id:key}})}});},
+    get language(){return saved.get("ekiden-manager-language")||"ja";},
+    click(action,key){assert.ok(handlers.click,"click handler registered");handlers.click({target:{closest:()=>({disabled:false,dataset:{action,key,id:key,lang:key}})}});},
     setField(id,value){fields[id]=value;},
     engine:global.EkidenEngine
   };
@@ -101,4 +102,29 @@ test("renderer code is independent of Node integration, and navigation is blocke
   assert.match(script,/sandbox:true/);
   assert.match(script,/setWindowOpenHandler/);
   assert.match(script,/onBeforeRequest/);
+});
+
+test("language switching uses the same save and does not advance RNG, and keeps both language controls visible",()=>{
+ const ui=createUiHarness(),before=JSON.stringify(ui.state);
+ assert.equal(ui.language,"ja");
+ assert.match(ui.markup,/data-lang="en"/);
+ ui.click("locale","en");
+ assert.equal(ui.language,"en");
+ assert.equal(JSON.stringify(ui.state),before);
+ assert.match(ui.markup,/data-lang="en" aria-pressed="true"/);
+ ui.click("locale","ja");
+ assert.equal(ui.language,"ja");
+ assert.equal(JSON.stringify(ui.state),before);
+});
+test("bilingual translation dictionary covers key athletics and championship terms without altering names in saved records",()=>{
+ const context=vm.createContext({});
+ vm.runInContext(fs.readFileSync(path.join(__dirname,"../src/i18n.js"),"utf8"),context);
+ const t=context.EkidenI18n;
+ assert.ok(t.translatedPhrases>=180);
+ assert.equal(t.translateText("全国高校スカウト","en"),"High School Scouting Network");
+ assert.equal(t.translateText("選手名鑑","en"),"Athlete Roster");
+ assert.equal(t.translateText("北稜大学","en"),"Hokuryo University");
+ assert.equal(t.translateText("精神力","en"),"Mental Grit");
+ assert.equal(t.translateText("第3区","en"),"Leg 3");
+ assert.equal(t.translateText("全国高校スカウト","ja"),"全国高校スカウト");
 });
