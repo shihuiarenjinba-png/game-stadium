@@ -87,3 +87,8 @@
 .coach-advanced[open]>summary{border-bottom:1px solid #415966;margin-bottom:12px}
 .coach-advanced .panel{margin-bottom:11px}
 @media(max-width:550px){.coach-orientation{padding:14px}.coach-advanced{padding:5px 9px}}
+
+.save-recovery{background:#463137;border:2px solid #e1a6a6;border-radius:12px;padding:18px 20px;margin-bottom:14px;color:#ffeae6}
+.save-recovery strong{font-size:17px}
+.save-recovery p{line-height:1.8;margin:7px 0 14px}
+.save-recovery button{min-height:44px}
