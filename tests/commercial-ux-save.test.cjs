@@ -12,7 +12,7 @@ function bootWithSaved(raw){
   for(const file of ["engine.js","prediction.js","app.js"]){
     vm.runInContext(fs.readFileSync(path.join(__dirname,"..","src",file),"utf8"),context,{filename:file});
   }
-  return {markup:()=>markup,stored:()=>map.get("ekiden-manager-v1"),click(action){click({target:{closest:()=>({disabled:false,dataset:{action}})}})}};
+  return {markup:()=>markup,stored:()=>map.get("ekiden-manager-v1"),click(action,lang){click({target:{closest:()=>({disabled:false,dataset:{action,lang}})}})}};
 }
 test("damaged save remains byte-identical until the player explicitly resets",()=>{
   const original='{"corrupt-save":not-json}';
@@ -32,4 +32,17 @@ test("new player sees a stage-specific next action and progressive advanced opti
   assert.match(game.markup(),/ゲームの流れを確認する/);
   assert.match(game.markup(),/class="coach-advanced"/);
   assert.match(game.markup(),/部費・補強・他校分析・過去の結果（詳細）/);
+});
+
+test("coach instructions switch to English without affecting the saved game",()=>{
+ const ui=bootWithSaved(null);
+ const before=ui.stored();
+ ui.click("locale","en");
+ assert.equal(ui.stored(),before,"translation must not advance the simulation");
+ assert.match(ui.markup(),/weeks left: build your team/);
+ assert.match(ui.markup(),/How the game works/);
+ assert.match(ui.markup(),/Current objective/);
+ ui.click("locale","ja");
+ assert.equal(ui.stored(),before);
+ assert.match(ui.markup(),/自分だけのチームを強くしよう/);
 });
