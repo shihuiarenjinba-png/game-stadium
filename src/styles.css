@@ -73,3 +73,17 @@
 @media(max-width:680px){.language-switch{width:100%;justify-content:flex-start}.language-switch .tag{font-size:11px}}
 
 .mini.pressure{color:#f0d38d;font-weight:700;white-space:normal;font-size:10px;margin:3px 0}
+
+/* Store-quality coaching: a clear next action, advanced panels on demand. */
+.coach-orientation{background:linear-gradient(135deg,#253b35,#1a2a33);border:1px solid #8eaf89;border-radius:14px;padding:18px 22px;margin-bottom:14px}
+.coach-phase{display:inline-block;color:#f8d592;font-size:12px;font-weight:800;letter-spacing:.06em}
+.coach-orientation h2{font-size:clamp(17px,2.4vw,23px);margin:5px 0 7px;line-height:1.5}
+.coach-orientation p{margin:0 0 9px;line-height:1.8;color:#d5e6e2}
+.coach-orientation details{border-top:1px solid #547265;padding-top:7px}
+.coach-orientation summary,.coach-advanced>summary{padding:9px 4px;cursor:pointer;color:#f5d9a4;font-weight:700}
+.coach-orientation summary:focus-visible,.coach-advanced>summary:focus-visible{outline:2px solid #f5cc80;outline-offset:2px}
+.coach-orientation ol{line-height:1.9;color:#d2ded9}
+.coach-advanced{border:1px solid #415966;border-radius:12px;background:#15242d;margin-bottom:14px;padding:5px 12px}
+.coach-advanced[open]>summary{border-bottom:1px solid #415966;margin-bottom:12px}
+.coach-advanced .panel{margin-bottom:11px}
+@media(max-width:550px){.coach-orientation{padding:14px}.coach-advanced{padding:5px 9px}}
