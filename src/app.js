@@ -14,9 +14,10 @@
   const esc=x=>String(x??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
   const average=r=>Math.round((r.stats.speed+r.stats.stamina+r.stats.hill+r.stats.grit)/4);
   const seed=()=>{const n=new Uint32Array(1);if(globalThis.crypto?.getRandomValues){globalThis.crypto.getRandomValues(n);return n[0]||1;}return (Date.now()>>>0)||1;};
+  let recoveryBlocked=false, corruptRaw=null;
   let state=load(), flash="",marketTeam="北稜大学",marketRank=1,marketStake=50000;
-  function load(){try{const raw=localStorage.getItem(KEY);if(raw){const s=E.migrateSave(JSON.parse(raw));return s;}}catch(e){console.warn("セーブデータの読み込みに失敗:",e.message)}return E.newGame(seed())}
-  function persist(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){flash="自動保存できませんでした。下の「セーブ書き出し」を使用してください。";}}
+  function load(){try{const raw=localStorage.getItem(KEY);if(raw){const s=E.migrateSave(JSON.parse(raw));return s;}}catch(e){recoveryBlocked=true;corruptRaw=localStorage.getItem(KEY);console.warn("セーブデータの読み込みに失敗:",e.message)}return E.newGame(seed())}
+  function persist(){if(recoveryBlocked)return;try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){flash="自動保存できませんでした。下の「セーブ書き出し」を使用してください。";}}
   function panel(title,sub,body){return '<section class="panel"><header class="panelhead"><h2>'+title+'</h2><span class="tiny muted">'+sub+'</span></header><div class="panelbody">'+body+'</div></section>'}
   function statsCards(){
     const avg=Math.round(state.roster.reduce((a,b)=>a+average(b),0)/state.roster.length);
@@ -222,13 +223,14 @@
   function render(){
     const root=document.getElementById("app");
     root.innerHTML='<div class="wrap"><header class="top"><div><div class="eyebrow">University long-distance strategy</div><h1 class="brand">EKIDEN <span class="accent">MANAGER</span></h1><div class="sub">栄光への襷 — 育成 × レース戦術 × 部費経営</div></div><div class="language-switch" role="group" aria-label="表示言語 / Display language"><button type="button" class="btn small ghost language-button" data-action="locale" data-lang="ja" aria-pressed="'+(locale==="ja")+'">日本語</button><button type="button" class="btn small ghost language-button" data-action="locale" data-lang="en" aria-pressed="'+(locale==="en")+'">English</button><span class="tag">OFFLINE ALPHA v0.7.0 · JP/EN</span></div></header>'+
+      (recoveryBlocked?'<section class="save-recovery" role="alert"><strong>保存記録を安全に読み込めませんでした。</strong><p>元のセーブデータは上書きしていません。元データを退避してから新規開始するか、正常なセーブを読み込んでください。</p><div class="flex"><button class="btn secondary" data-action="export-corrupt">元のセーブをファイルに退避</button><button class="btn danger" data-action="reset">新しいゲームを開始</button></div></section>':'')+
       coachOrientation()+statsCards()+'<div class="notice">'+esc(flash||state.lastLog)+'</div><div class="layout"><div>'+ 
       (state.week<12&&!state.race&&!state.ending?highSchoolRecruitment():'')+(state.week>=12&&!state.race&&!state.ending?predictionMarket():'')+racing()+training()+(state.week>=12||!!state.race?highSchoolRecruitment():'')+schoolEvents()+lineup()+runners()+'</div><aside>'+tutorial()+(state.week>=12&&!state.race&&!state.ending?'':predictionMarket())+'<details class="coach-advanced"><summary>部費・補強・他校分析・過去の結果（詳細）</summary>'+finance()+store()+rivalDashboard()+history()+'</details></aside></div>'+
       '<footer class="footer"><div>ゲームの選手・大学・財務は架空設定です。結果は乱数シードで再現可能です。</div><div class="flex"><button class="btn small ghost" data-action="export">セーブ書き出し</button><button class="btn small ghost" data-action="import">セーブ読込</button><button class="btn small danger" data-action="reset">最初から</button><input type="file" id="savefile" accept=".json,application/json" hidden/></div></footer></div>';
     const root2=document.getElementById("app");
     if(globalThis.EkidenI18n&&root2&&root2.ownerDocument)globalThis.EkidenI18n.localize(root2,locale);
   }
-  function execute(fn){flash="";const checkpoint=JSON.stringify(state);try{fn();E.validate(state);persist();}catch(e){state=JSON.parse(checkpoint);flash="操作できませんでした："+e.message;}render();}
+  function execute(fn){if(recoveryBlocked){flash="保存記録を退避するか、正常なセーブを読み込んでから操作してください。";render();return;}flash="";const checkpoint=JSON.stringify(state);try{fn();E.validate(state);persist();}catch(e){state=JSON.parse(checkpoint);flash="操作できませんでした："+e.message;}render();}
   function exportSave(){const data=JSON.stringify(state,null,2),blob=new Blob([data],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="ekiden-manager-year-"+state.year+".json";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   document.addEventListener("click",event=>{
     const button=event.target.closest("[data-action]");if(!button||button.disabled)return;
@@ -240,9 +242,16 @@
       try{localStorage.setItem(LANG_KEY,locale);}catch(_e){}
       render();return;
     }
+    if(action==="export-corrupt"){
+      if(recoveryBlocked&&corruptRaw!==null){
+        const blob=new Blob([corruptRaw],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+        a.href=url;a.download="ekiden-manager-recovery-original.json";document.body.appendChild(a);a.click();a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),1000);
+      }return;
+    }
     if(action==="export"){exportSave();return;}
     if(action==="import"){document.getElementById("savefile").click();return;}
-    if(action==="reset"){if(confirm("今の進行状況を消し、初年度から始めますか？ セーブ書き出しを推奨します。")){state=E.newGame(seed());persist();render();}return;}
+    if(action==="reset"){if(confirm(recoveryBlocked?"読込できない元のセーブを新規ゲームで置き換えます。先に退避ファイルを保存しましたか？":"今の進行状況を消し、初年度から始めますか？ セーブ書き出しを推奨します。")){recoveryBlocked=false;corruptRaw=null;state=E.newGame(seed());persist();render();}return;}
     execute(()=>{
       if(action==="train")E.train(state,document.getElementById("focus").value,document.getElementById("intensity").value);
       else if(action==="buy")E.buyItem(state,button.dataset.key);
@@ -262,7 +271,7 @@
     if(event.target.id==="market-stake"){marketStake=Number(event.target.value);render();return;}
     if(event.target.id!=="savefile")return;
     const file=event.target.files[0];if(!file)return;
-    file.text().then(text=>{if(text.length>8*1024*1024)throw Error("セーブファイルが大きすぎます");const imported=E.migrateSave(JSON.parse(text));state=imported;flash="セーブデータを読み込みました。";persist();render();}).catch(e=>{flash="読込失敗："+e.message;render()});
+    file.text().then(text=>{if(text.length>8*1024*1024)throw Error("セーブファイルが大きすぎます");const imported=E.migrateSave(JSON.parse(text));state=imported;recoveryBlocked=false;corruptRaw=null;flash="セーブデータを読み込みました。";persist();render();}).catch(e=>{flash="読込失敗："+e.message;render()});
   });
   // Persist new-career seed before a language-only change.
   persist();render();
