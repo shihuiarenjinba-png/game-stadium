@@ -16,7 +16,7 @@
   const seed=()=>{const n=new Uint32Array(1);if(globalThis.crypto?.getRandomValues){globalThis.crypto.getRandomValues(n);return n[0]||1;}return (Date.now()>>>0)||1;};
   let recoveryBlocked=false, corruptRaw=null;
   let state=load(), flash="",marketTeam="北稜大学",marketRank=1,marketStake=50000;
-  function load(){try{const raw=localStorage.getItem(KEY);if(raw){const s=E.migrateSave(JSON.parse(raw));return s;}}catch(e){recoveryBlocked=true;corruptRaw=localStorage.getItem(KEY);console.warn("セーブデータの読み込みに失敗:",e.message)}return E.newGame(seed())}
+  function load(){let raw=null;try{raw=localStorage.getItem(KEY);if(raw){const s=E.migrateSave(JSON.parse(raw));return s;}}catch(e){recoveryBlocked=true;corruptRaw=raw;console.warn("セーブデータの読み込みに失敗:",e.message)}return E.newGame(seed())}
   function persist(){if(recoveryBlocked)return;try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){flash="自動保存できませんでした。下の「セーブ書き出し」を使用してください。";}}
   function panel(title,sub,body){return '<section class="panel"><header class="panelhead"><h2>'+title+'</h2><span class="tiny muted">'+sub+'</span></header><div class="panelbody">'+body+'</div></section>'}
   function statsCards(){
