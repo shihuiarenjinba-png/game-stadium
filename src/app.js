@@ -189,35 +189,44 @@
     return panel("監督手帳","現在の段階："+phase,'<p class="tiny">'+hint+'</p><details class="collapse"><summary class="tiny">基本操作と戦術のコツを読む</summary><ol class="tiny muted"><li>選手の得意な能力を見て5区間に配置</li><li>練習12週。疲労が高いと成長が落ちる</li><li>合宿・スカウト・回復は部費から出費</li><li>レースは各区間3地点、体力を見ながらペースを選ぶ</li><li>年度決算を確定すると4年生が卒業し新入部員が加入</li><li>最強の北稜大学も世代交代する。数年かけて全国優勝を狙おう</li></ol></details>');
   }
 
+  const coachText=(ja,en)=>locale==="en"?en:ja;
   function coachNextAction(){
-    // Guidance is read-only: no RNG consumption and no save modification.
+    // Pure orientation text: never changes state, save or RNG.
     if(state.ending){
-      return {phase:"監督としての8年間",title:"これまでの挑戦を振り返ろう",
-        action:"最終成績を確認し、新しい挑戦を始めるか決めましょう。"};
+      return {phase:coachText("監督としての8年間","Your eight-year campaign"),
+        title:coachText("これまでの挑戦を振り返ろう","Review your coaching journey"),
+        action:coachText("最終成績を確認し、新しい挑戦を始めるか決めましょう。","Review your final result before starting a new campaign.")};
     }
     if(state.race){
       return state.race.finished
-        ? {phase:"大会終了",title:"戦いの結果が次の一年につながる",
-           action:"区間順位と大会結果を確認したら、年度決算へ進みましょう。"}
-        : {phase:"全国大学駅伝",title:"ここからは、あなたのペース指示で勝負が変わる",
-           action:"残り体力とタイム差を確認し、「温存」「標準」「攻め」から選んでください。"};
+        ? {phase:coachText("大会終了","Championship finished"),
+           title:coachText("戦いの結果が次の一年につながる","This result shapes your next season"),
+           action:coachText("区間順位と大会結果を確認したら、年度決算へ進みましょう。","Review the stage results before closing the financial year.")}
+        : {phase:coachText("全国大学駅伝","Championship race"),
+           title:coachText("ここからは、あなたのペース指示で勝負が変わる","Your pace choices can change the race"),
+           action:coachText("残り体力とタイム差を確認し、「温存」「標準」「攻め」から選んでください。","Check stamina and time gaps, then choose a cautious, steady or aggressive pace.")};
     }
     if(state.week>=12){
-      return {phase:"大会への準備",title:"育てた5人で、強豪大学に挑む",
-        action:"5区間の出走選手と遠征費を確認し、大会を開始しましょう。"};
+      return {phase:coachText("大会への準備","Race preparation"),
+        title:coachText("育てた5人で、強豪大学に挑む","Take your five runners to the championship"),
+        action:coachText("5区間の出走選手と遠征費を確認し、大会を開始しましょう。","Confirm five runners and travel funds, then start the race.")};
     }
-    return {phase:"新年度の育成",title:"あと"+(12-state.week)+"週。自分だけのチームを強くしよう",
-      action:"育成項目と練習強度を選んで一週進めましょう。スカウトや合宿も選べます。"};
+    return {phase:coachText("新年度の育成","Season preparation"),
+      title:coachText("あと"+(12-state.week)+"週。自分だけのチームを強くしよう",(12-state.week)+" weeks left: build your team"),
+      action:coachText("育成項目と練習強度を選んで一週進めましょう。スカウトや合宿も選べます。","Choose a training focus and intensity. Scouting and camps are optional.")};
   }
   function coachOrientation(){
     const next=coachNextAction();
-    return '<section class="coach-orientation" aria-label="現在の目標">'+
+    const tips=[
+      coachText("選手を育て、疲労や部費を管理する","Train runners while managing fatigue and funds"),
+      coachText("5人の区間を決め、15地点で戦術を指示する","Assign five runners and choose tactics at 15 checkpoints"),
+      coachText("年度決算と世代交代を経て全国優勝を目指す","Close each season and build toward the national title")
+    ];
+    return '<section class="coach-orientation" aria-label="'+esc(coachText("現在の目標","Current objective"))+'">'+
       '<span class="coach-phase">'+esc(next.phase)+'</span>'+
       '<h2>'+esc(next.title)+'</h2><p>'+esc(next.action)+'</p>'+
-      '<details><summary>ゲームの流れを確認する</summary><ol>'+
-      '<li>選手を育て、疲労や部費を管理する</li>'+
-      '<li>5人の区間を決め、15地点で戦術を指示する</li>'+
-      '<li>年度決算と世代交代を経て全国優勝を目指す</li>'+
+      '<details><summary>'+esc(coachText("ゲームの流れを確認する","How the game works"))+'</summary><ol>'+
+      tips.map(x=>'<li>'+esc(x)+'</li>').join('')+
       '</ol></details></section>';
   }
   function render(){
