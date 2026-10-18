@@ -16,6 +16,7 @@ function gate(env,{platform=process.platform,rootDir=root,installedBuilderVersio
  if(platform!=="win32")errors.push("正規MSIXはWindowsのコード担当環境でビルドしてください");
  if(env.STORE_IDENTITY_CONFIRMED!=="YES")errors.push("STORE_IDENTITY_CONFIRMED=YES（本人のIdentity確認）が必要");
  if(env.STORE_BRAND_APPROVED!=="YES")errors.push("STORE_BRAND_APPROVED=YES（ロゴの権利・表示確認）が必要");
+ if(env.STORE_PREDICTION_CONTENT_REVIEWED!=="YES")errors.push("STORE_PREDICTION_CONTENT_REVIEWED=YES（順位予想・仮想払戻しの内容とIARCへの申告方針の承認）が必要");
  const ver=env.STORE_PACKAGE_VERSION||"";
  if(!/^\d+\.\d+\.\d+\.0$/.test(ver)||ver.split(".").some(x=>Number(x)>65535)||Number(ver.split(".")[0])<1)
   errors.push("STORE_PACKAGE_VERSION=1.0.0.0形式の正式パッケージ版番号が必要");
