@@ -47,6 +47,10 @@ function makeConfig(env){
 function run(){
  const errors=gate(process.env);
  if(errors.length){process.stderr.write("STORE_MSIX_HOLD\n"+errors.map(e=>" - "+e).join("\n")+"\n");process.exitCode=2;return;}
+ if(process.argv.includes("--preflight")){
+  process.stdout.write("STORE_MSIX_PREFLIGHT_PASS — Partner Center設定とロゴの確認のみ。MSIX生成・WACK・販売提出は未実施。\n");
+  return;
+ }
  const out=path.join(root,"dist-msix-store-candidate");
  if(fs.existsSync(out)&&fs.readdirSync(out).length){process.stderr.write("出力ディレクトリに既存成果物があります。上書きせず別環境で検証してください。\n");process.exitCode=2;return;}
  const configPath=path.join(root,"electron-builder.store.candidate.generated.json");
