@@ -20,7 +20,7 @@
   function persist(){if(recoveryBlocked)return;try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){flash="自動保存できませんでした。下の「セーブ書き出し」を使用してください。";}}
   function panel(title,sub,body){
     const view=title.includes("全国大学駅伝")?"race":
-      title.includes("週間トレーニング")?"training":
+      (title.includes("週間トレーニング")||title.includes("合同練習"))?"training":
       /スカウト|選手名鑑|区間配置|大学生活|突発イベント/.test(title)?"team":
       /順位予想|部費で購入|年度決算|ライバル大学|歴代成績/.test(title)?"management":
       title.includes("監督手帳")?"guide":"team";
@@ -41,6 +41,32 @@
     const selects=E.SKILLS.map(s=>'<option value="'+s+'">'+skillLabels[s]+'</option>').join("");
     return panel("週間トレーニング","年間12週を圧縮したシーズン","<p class='muted tiny'>選んだ能力を10名全員が鍛えます。出走予定の5名は合宿・測定の特別効果を受けます。疲労が高いと練習効率が低下します。</p><div class='controlrow'><div class='field'><label for='focus'>育成項目</label><select id='focus'>"+selects+"</select></div><div class='field'><label for='intensity'>練習強度</label><select id='intensity'><option value='light'>調整練習（¥38,000）</option><option value='normal' selected>通常練習（¥72,000）</option><option value='hard'>高強度（¥110,000）</option></select></div><button class='btn' data-action='train' "+(disabled?"disabled":"")+">次の週へ進む →</button></div><div class='divider'></div><div class='flex'><span class='pill'>"+state.week+" / 12週</span><span class='muted tiny'>3D表示・通信なし / セーブ対応</span></div>")
   }
+  function jointTrainingPanel(){
+    const used=(state.jointTraining||[]).filter(x=>x.year===state.year);
+    const protectedCash=480000+(12-state.week)*38000;
+    const eligible=state.week>=1&&state.week<12&&!state.race&&!state.ending&&
+      used.length<E.JOINT_MAX_PER_YEAR&&
+      !used.some(x=>x.week===state.week)&&state.cash-E.JOINT_COST>=protectedCash;
+    const selected=state.lineup.map(id=>{
+      const athlete=state.roster.find(r=>r.id===id);
+      return '<div class="joint-runner"><label for="joint-'+id+'">'+esc(athlete.name)+'（'+athlete.grade+'年）</label><select id="joint-'+id+'" '+(eligible?'':'disabled')+'>'+
+        E.SKILLS.map(k=>'<option value="'+k+'">'+skillLabels[k]+' ＋'+E.JOINT_GAIN.toFixed(1)+'</option>').join('')+
+        '</select><span class="tiny muted">疲労 '+Math.round(athlete.fatigue)+' / 100 → 最大'+Math.min(100,Math.round(athlete.fatigue+5))+'</span></div>';
+    }).join('');
+    const result=used.length?
+      '<div class="tiny muted">今シーズンの参加：'+used.length+'/'+E.JOINT_MAX_PER_YEAR+'回。最後の参加週：第'+used.at(-1).week+'週</div>':'';
+    const explanation='他チームと走り方を学ぶ有料合同練習です。試合や順位付けはありません。出走予定5名に合計5ポイントを配分（各1ポイント・能力上限99）、疲労は各+5。第1〜11週、同じ週は1回まで、年間2回まで。開催しても週は進みません。';
+    return panel("合同練習｜経験値を配分","参加費 "+yen(E.JOINT_COST)+" / "+used.length+" of "+E.JOINT_MAX_PER_YEAR,
+       '<p class="muted tiny">'+explanation+'</p>'+result+
+       '<div class="joint-grid">'+selected+'</div>'+
+       '<div class="controlrow"><button type="button" class="btn" data-action="joint-practice" '+(eligible?'':'disabled')+'>参加費を払って合同練習を行う →</button>'+
+       '<span class="tiny muted">'+(state.week<1?'第1週の練習後に参加できます。':
+         state.week>=12?'大会前の合同練習は終了しました。':
+         used.some(x=>x.week===state.week)?'今週は既に参加しています。':
+         used.length>=E.JOINT_MAX_PER_YEAR?'今シーズンの参加上限に達しました。':
+         !eligible?'部費と大会遠征費を確認してください。':'確定すると部費・能力・疲労が同時に更新されます。')+'</span></div>');
+  }
+
   function highSchoolRecruitment(){
     const schools=E.visibleScouting(state),scouted=schools.filter(h=>h.scouted);
     const locked=!!state.race||state.week>=12||(state.scouting||0)>=3;
@@ -241,7 +267,7 @@
     root.innerHTML='<div class="wrap"><header class="top"><div><div class="eyebrow">University long-distance strategy</div><h1 class="brand">EKIDEN <span class="accent">MANAGER</span></h1><div class="sub">栄光への襷 — 育成 × レース戦術 × 部費経営</div></div><div class="language-switch" role="group" aria-label="表示言語 / Display language"><button type="button" class="btn small ghost language-button" data-action="locale" data-lang="ja" aria-pressed="'+(locale==="ja")+'">日本語</button><button type="button" class="btn small ghost language-button" data-action="locale" data-lang="en" aria-pressed="'+(locale==="en")+'">English</button><span class="tag">OFFLINE ALPHA v0.7.0 · JP/EN</span></div></header>'+
       (recoveryBlocked?'<section class="save-recovery" role="alert"><strong>保存記録を安全に読み込めませんでした。</strong><p>元のセーブデータは上書きしていません。元データを退避してから新規開始するか、正常なセーブを読み込んでください。</p><div class="flex"><button class="btn secondary" data-action="export-corrupt">元のセーブをファイルに退避</button><button class="btn danger" data-action="reset">新しいゲームを開始</button></div></section>':'')+
       coachOrientation()+statsCards()+'<div class="notice">'+esc(flash||state.lastLog)+'</div><div class="layout"><div>'+ 
-      (state.week<12&&!state.race&&!state.ending?highSchoolRecruitment():'')+(state.week>=12&&!state.race&&!state.ending?predictionMarket():'')+racing()+training()+(state.week>=12||!!state.race?highSchoolRecruitment():'')+schoolEvents()+lineup()+runners()+'</div><aside>'+tutorial()+(state.week>=12&&!state.race&&!state.ending?'':predictionMarket())+'<details class="coach-advanced"><summary>部費・補強・他校分析・過去の結果（詳細）</summary>'+finance()+store()+rivalDashboard()+history()+'</details></aside></div>'+
+      (state.week<12&&!state.race&&!state.ending?highSchoolRecruitment():'')+(state.week>=12&&!state.race&&!state.ending?predictionMarket():'')+racing()+training()+(state.week>=12||!!state.race?highSchoolRecruitment():'')+schoolEvents()+jointTrainingPanel()+lineup()+runners()+'</div><aside>'+tutorial()+(state.week>=12&&!state.race&&!state.ending?'':predictionMarket())+'<details class="coach-advanced"><summary>部費・補強・他校分析・過去の結果（詳細）</summary>'+finance()+store()+rivalDashboard()+history()+'</details></aside></div>'+
       '<footer class="footer"><div>ゲームの選手・大学・財務は架空設定です。結果は乱数シードで再現可能です。</div><div class="flex"><button class="btn small ghost" data-action="export">セーブ書き出し</button><button class="btn small ghost" data-action="import">セーブ読込</button><button class="btn small danger" data-action="reset">最初から</button><input type="file" id="savefile" accept=".json,application/json" hidden/></div></footer></div>';
     const root2=document.getElementById("app");
     if(globalThis.EkidenI18n&&root2&&root2.ownerDocument)globalThis.EkidenI18n.localize(root2,locale);
@@ -270,6 +296,7 @@
     if(action==="reset"){if(confirm(recoveryBlocked?"読込できない元のセーブを新規ゲームで置き換えます。先に退避ファイルを保存しましたか？":"今の進行状況を消し、初年度から始めますか？ セーブ書き出しを推奨します。")){recoveryBlocked=false;corruptRaw=null;state=E.newGame(seed());persist();render();}return;}
     execute(()=>{
       if(action==="train")E.train(state,document.getElementById("focus").value,document.getElementById("intensity").value);
+      else if(action==="joint-practice")E.jointPractice(state,state.lineup.map(id=>({id,focus:document.getElementById("joint-"+id).value})));
       else if(action==="buy")E.buyItem(state,button.dataset.key);
       else if(action==="scout")E.investScouting(state,Number(document.getElementById("scout-school").value));
       else if(action==="target")E.targetRecruit(state,Number(button.dataset.id));
