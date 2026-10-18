@@ -105,3 +105,13 @@ background:#243750;color:#f0f4fa;border:1px solid #475e83;font-weight:700}
 .layout:has([data-ekiden-screen])>div,.layout:has([data-ekiden-screen])>aside{display:contents}
 .coach-advanced:has([data-ekiden-screen]){margin-top:8px}
 @media(max-width:650px){.ekiden-navigation{flex-wrap:nowrap;overflow-x:auto}.ekiden-navigation button{flex:0 0 auto;min-width:112px}}
+
+
+/* Paid joint training: readable per-runner allocation without distracting race UI. */
+.season-phase{border-left:4px solid #c9e2f1;background:#243a4d;padding:10px 13px;border-radius:6px;font-weight:700}
+.joint-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:9px;margin:13px 0}
+.joint-runner{display:grid;gap:6px;background:#233846;border:1px solid #5d7a82;border-radius:10px;padding:12px}
+.joint-runner label{font-size:13px;font-weight:700;color:#f1efdc}
+.joint-runner select{width:100%;min-height:42px;background:#152832;color:#f4f6ed;border-radius:7px;border:1px solid #8ba8a6;padding:6px 10px}
+.joint-runner select:focus-visible{outline:3px solid #ffd47b;outline-offset:2px}
+@media(max-width:640px){.joint-grid{grid-template-columns:1fr}}
