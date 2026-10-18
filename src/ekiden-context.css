@@ -1,0 +1,38 @@
+
+/* Contextual EKIDEN scenes. Free CSS art; athlete motion only during an active race. */
+.ekiden-context{display:grid;grid-template-columns:minmax(180px,.8fr) minmax(190px,1fr);
+ align-items:center;gap:14px;border:1px solid #55738f;border-radius:12px;padding:11px;margin:0 0 16px;
+ background:linear-gradient(137deg,#173248,#152337)}
+.ekiden-context-art{position:relative;overflow:hidden;height:150px;border:1px solid #ffffff25;border-radius:9px;
+ background:linear-gradient(#8bc0d3 0 52%,#88ae86 52% 100%)}
+.ekiden-context-art>span{position:absolute;display:block}
+.ekiden-art-field{left:0;right:0;bottom:0;height:46%;background:linear-gradient(#9bbf8e,#5c8c72)}
+.ekiden-art-lane{bottom:7%;left:-5%;width:110%;height:22%;border-top:5px solid #f2ecd9;
+ border-bottom:5px solid #f2ecd9;background:#b46c5b;transform:skewY(-7deg)}
+.ekiden-art-building{left:8%;top:21%;width:32%;height:31%;border:3px solid #436575;background:#e4e4dc;
+ box-shadow:6px 5px 0 #1c35472a}
+.ekiden-art-prop{right:14%;bottom:28%;height:35%;width:21%;border:4px solid #5d778a;border-radius:7px;
+ background:linear-gradient(#f4ece2 0 20%,#a3b5bb 21% 100%)}
+.ekiden-art-runner{display:none;bottom:21%;left:42%;width:18px;height:43px;border-radius:10px;
+ background:linear-gradient(#efc4a0 0 25%,#e2e8f1 26% 70%,#263e61 71% 100%);
+ box-shadow:12px 20px 0 -5px #243d60,-10px 20px 0 -5px #243d60;
+ transform-origin:center bottom}
+.ekiden-context[data-context="running"] .ekiden-art-runner{display:block;animation:ekidenStride 800ms ease-in-out infinite alternate}
+.ekiden-context[data-context="finished"] .ekiden-art-runner,
+.ekiden-context[data-context="waiting"] .ekiden-art-runner,
+.ekiden-context[data-context="training"] .ekiden-art-runner,
+.ekiden-context[data-context="team"] .ekiden-art-runner,
+.ekiden-context[data-context="management"] .ekiden-art-runner,
+.ekiden-context[data-context="guide"] .ekiden-art-runner{display:none!important}
+.ekiden-context[data-context="training"] .ekiden-art-building{left:9%;width:64%;height:16%;top:50%;border-radius:10px;background:#d6e7d8}
+.ekiden-context[data-context="training"] .ekiden-art-prop{right:15%;height:24%;width:23%;bottom:22%;border-radius:50%;background:#f0d187}
+.ekiden-context[data-context="team"] .ekiden-art-prop{width:40%;height:45%;bottom:24%;background:#d1d8e0}
+.ekiden-context[data-context="management"] .ekiden-art-field,
+.ekiden-context[data-context="guide"] .ekiden-art-field{background:#465d6d}
+.ekiden-context[data-context="management"] .ekiden-art-prop,
+.ekiden-context[data-context="guide"] .ekiden-art-prop{width:37%;height:53%;bottom:24%;background:#f2e8cf}
+.ekiden-context-title{font-size:17px;color:#f3e7cf}
+.ekiden-context-note{font-size:12px;line-height:1.65;color:#d1e5f0;margin:5px 0 0}
+@keyframes ekidenStride{0%{transform:translateX(-6px) rotate(-7deg)}100%{transform:translateX(6px) rotate(7deg)}}
+@media(max-width:650px){.ekiden-context{grid-template-columns:1fr}.ekiden-context-art{height:115px}}
+@media(prefers-reduced-motion:reduce){.ekiden-context *{animation:none!important;transition:none!important}}
