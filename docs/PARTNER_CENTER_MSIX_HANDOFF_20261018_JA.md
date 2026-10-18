@@ -24,6 +24,8 @@ $env:STORE_PUBLISHER = "CN=46263F21-A700-41DB-8C9B-114C22FB82FC"
 $env:STORE_PUBLISHER_DISPLAY_NAME = "Okinawa Desktop Tools"
 $env:STORE_ID = "9NL1HLJRFQ39"
 $env:STORE_IDENTITY_CONFIRMED = "YES" # Partner Centerの原画面と照合した場合のみ
+# 架空の順位予想/払戻しについて年齢評価・Storeポリシーを確認した場合のみ:
+# $env:STORE_PREDICTION_CONTENT_REVIEWED = "YES"
 # ロゴ確認・権利確認・パッケージ版の正式承認後に限り設定
 # $env:STORE_BRAND_APPROVED = "YES"
 # $env:STORE_PACKAGE_VERSION = "1.0.0.0"
@@ -54,3 +56,12 @@ Microsoft公式:
 - https://learn.microsoft.com/en-us/windows/apps/publish/faq/get-started-with-the-microsoft-store
 - https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/package-identity-overview
 - https://www.electron.build/docs/msix/
+
+## EKIDEN固有の発売前HOLD
+
+- ゲーム内の架空順位予想と仮想の払戻しを、適用されるMicrosoft StoreポリシーとIARC年齢区分の質問内容に沿ってレビューする。実世界の金銭・賞品に換金できる機能は導入しない。
+- `STORE_PREDICTION_CONTENT_REVIEWED=YES` は確認が済んだ場合のみ設定し、名前予約だけを理由に指定しない。
+- Windows用既存EXEを作るelectron-builder v26.15.3と、MSIX候補用v27の相違を検証する。既存NSIS/Portable出力と原本セーブを無断変更しない。
+- `npm run audit:msix` には、正式ロゴ、商用版のバージョン、v27環境、Windows実機、予想ルール確認が揃うまでHOLDを返すことが期待される。
+
+資料: https://learn.microsoft.com/en-us/windows/apps/publish/store-policies （v7.20は2026年10月22日発効予定）、https://www.electron.build/docs/msix/ （v27ベータ）。
