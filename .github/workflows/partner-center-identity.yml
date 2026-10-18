@@ -1,0 +1,19 @@
+name: Partner Center identity regression
+on:
+  push:
+    branches: ["feature/partner-center-identity-20261018"]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify game source and Store identity gates
+        run: npm test
