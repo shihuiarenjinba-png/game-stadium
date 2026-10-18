@@ -36,10 +36,17 @@
       ["全国制覇",state.awards+"回","強豪・北稜大学に挑戦"]
     ].map(a=>'<div class="stat"><div class="name">'+a[0]+'</div><div class="value">'+a[1]+'</div><div class="meta">'+a[2]+'</div></div>').join("")+'</div>'
   }
+  function seasonPhase(){
+    if(state.race)return "大会本番：5区間・15地点で戦術判断";
+    if(state.week>=12)return "大会直前：区間編成を確定して出走";
+    if(state.week<4)return "基礎育成期（第1〜4週）：全員の能力と疲労を整える";
+    if(state.week<8)return "強化・選考期（第5〜8週）：重点能力と出走候補を調整";
+    return "大会準備期（第9〜12週）：疲労管理・5区間編成を優先";
+  }
   function training(){
     const disabled=state.week>=12||!!state.race;
     const selects=E.SKILLS.map(s=>'<option value="'+s+'">'+skillLabels[s]+'</option>').join("");
-    return panel("週間トレーニング","年間12週を圧縮したシーズン","<p class='muted tiny'>選んだ能力を10名全員が鍛えます。出走予定の5名は合宿・測定の特別効果を受けます。疲労が高いと練習効率が低下します。</p><div class='controlrow'><div class='field'><label for='focus'>育成項目</label><select id='focus'>"+selects+"</select></div><div class='field'><label for='intensity'>練習強度</label><select id='intensity'><option value='light'>調整練習（¥38,000）</option><option value='normal' selected>通常練習（¥72,000）</option><option value='hard'>高強度（¥110,000）</option></select></div><button class='btn' data-action='train' "+(disabled?"disabled":"")+">次の週へ進む →</button></div><div class='divider'></div><div class='flex'><span class='pill'>"+state.week+" / 12週</span><span class='muted tiny'>3D表示・通信なし / セーブ対応</span></div>")
+    return panel("週間トレーニング","年間12週を圧縮したシーズン","<p class='season-phase'>"+seasonPhase()+"</p><p class='muted tiny'>選んだ能力を10名全員が鍛えます。出走予定の5名は合宿・測定の特別効果を受けます。疲労が高いと練習効率が低下します。</p><div class='controlrow'><div class='field'><label for='focus'>育成項目</label><select id='focus'>"+selects+"</select></div><div class='field'><label for='intensity'>練習強度</label><select id='intensity'><option value='light'>調整練習（¥38,000）</option><option value='normal' selected>通常練習（¥72,000）</option><option value='hard'>高強度（¥110,000）</option></select></div><button class='btn' data-action='train' "+(disabled?"disabled":"")+">次の週へ進む →</button></div><div class='divider'></div><div class='flex'><span class='pill'>"+state.week+" / 12週</span><span class='muted tiny'>3D表示・通信なし / セーブ対応</span></div>")
   }
   function jointTrainingPanel(){
     const used=(state.jointTraining||[]).filter(x=>x.year===state.year);
