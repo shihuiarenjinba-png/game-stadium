@@ -92,3 +92,16 @@
 .save-recovery strong{font-size:17px}
 .save-recovery p{line-height:1.8;margin:7px 0 14px}
 .save-recovery button{min-height:44px}
+
+
+.ekiden-navigation{position:sticky;top:0;z-index:50;display:flex;flex-wrap:wrap;gap:7px;
+padding:8px;border:1px solid #56708d;border-radius:13px;background:#122038;margin:15px 0}
+.ekiden-navigation button{min-height:44px;min-width:125px;flex:1 1 auto;border-radius:8px;
+background:#243750;color:#f0f4fa;border:1px solid #475e83;font-weight:700}
+.ekiden-navigation button[aria-selected="true"]{background:#cae0f9;color:#152840;border-color:#fff}
+.ekiden-navigation button:focus-visible{outline:3px solid #f9d27b;outline-offset:2px}
+[data-ekiden-screen][hidden]{display:none!important}
+.layout:has([data-ekiden-screen]){display:block}
+.layout:has([data-ekiden-screen])>div,.layout:has([data-ekiden-screen])>aside{display:contents}
+.coach-advanced:has([data-ekiden-screen]){margin-top:8px}
+@media(max-width:650px){.ekiden-navigation{flex-wrap:nowrap;overflow-x:auto}.ekiden-navigation button{flex:0 0 auto;min-width:112px}}
