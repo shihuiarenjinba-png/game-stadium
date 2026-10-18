@@ -3,11 +3,19 @@
  const PAGES=[["race","🏃 レース"],["training","🏋️ 練習"],["team","👥 選手・編成"],
               ["management","💴 経営・記録"],["guide","📖 遊び方"]];
  const root=document.getElementById("app");if(!root)return;
- let selected="race";
+ let selected="race",initialViewDecided=false;
  function sync(){
   const wrap=root.querySelector(".wrap");if(!wrap)return;
   const panels=Array.from(root.querySelectorAll("[data-ekiden-screen]"));
   if(!panels.length)return;
+  // First-time coaches should see weekly training, not an unopened race screen.
+  // Later render calls retain the player's chosen tab.
+  if(!initialViewDecided){
+   initialViewDecided=true;
+   const pendingTraining=root.querySelector('[data-ekiden-screen="race"]');
+   const raceAvailable=!!pendingTraining?.querySelector('[data-action="start"],[data-action="next"],[data-action="skip"],[data-action="close"]');
+   if(!raceAvailable&&panels.some(p=>p.dataset.ekidenScreen==="training"))selected="training";
+  }
   let nav=wrap.querySelector("#ekidenNav");
   if(!nav){
    nav=document.createElement("nav");nav.id="ekidenNav";nav.className="ekiden-navigation";
@@ -24,7 +32,11 @@
    panel.hidden=!visible;panel.setAttribute("aria-hidden",String(!visible));
   }
   const adv=root.querySelector(".coach-advanced");
-  if(adv&&selected==="management")adv.open=true;
+  if(adv){
+   adv.hidden=selected!=="management";
+   adv.setAttribute("aria-hidden",String(adv.hidden));
+   if(!adv.hidden)adv.open=true;
+  }
   for(const button of nav.querySelectorAll("[data-ekiden-tab]")){
    const active=button.dataset.ekidenTab===selected;button.setAttribute("aria-selected",String(active));
    button.tabIndex=active?0:-1;
