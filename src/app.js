@@ -18,7 +18,14 @@
   let state=load(), flash="",marketTeam="北稜大学",marketRank=1,marketStake=50000;
   function load(){let raw=null;try{raw=localStorage.getItem(KEY);if(raw){const s=E.migrateSave(JSON.parse(raw));return s;}}catch(e){recoveryBlocked=true;corruptRaw=raw;console.warn("セーブデータの読み込みに失敗:",e.message)}return E.newGame(seed())}
   function persist(){if(recoveryBlocked)return;try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){flash="自動保存できませんでした。下の「セーブ書き出し」を使用してください。";}}
-  function panel(title,sub,body){return '<section class="panel"><header class="panelhead"><h2>'+title+'</h2><span class="tiny muted">'+sub+'</span></header><div class="panelbody">'+body+'</div></section>'}
+  function panel(title,sub,body){
+    const view=title.includes("全国大学駅伝")?"race":
+      title.includes("週間トレーニング")?"training":
+      /スカウト|選手名鑑|区間配置|大学生活|突発イベント/.test(title)?"team":
+      /順位予想|部費で購入|年度決算|ライバル大学|歴代成績/.test(title)?"management":
+      title.includes("監督手帳")?"guide":"team";
+    return '<section class="panel" data-ekiden-screen="'+view+'"><header class="panelhead"><h2>'+title+'</h2><span class="tiny muted">'+sub+'</span></header><div class="panelbody">'+body+'</div></section>';
+  }
   function statsCards(){
     const avg=Math.round(state.roster.reduce((a,b)=>a+average(b),0)/state.roster.length);
     const amount=state.race?(state.race.finished?"完走":("第"+Math.min(5,state.race.leg+1)+"区 "+((state.race.segment||0)+1)+"/3")):(state.week>=12?"大会直前":"練習中");
