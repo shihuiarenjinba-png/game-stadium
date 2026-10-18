@@ -48,7 +48,7 @@ test("reserve funds and old save compatibility are preserved",()=>{
  const saved=JSON.parse(JSON.stringify(s));const prohibited=alloc(s);
  s.cash=100000;
  // Cash must equal ledger before persisted validation, but direct action still protects reserved funds.
- assert.throws(()=>G.jointPractice(s,prohibited),/最低練習費/);
+ assert.throws(()=>G.jointPractice(s,prohibited),/残りの練習費/);
  assert.equal(s.jointTraining.length,0);
  assert.equal(G.validate(saved),true);
 });
