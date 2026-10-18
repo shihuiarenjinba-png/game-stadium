@@ -7,7 +7,28 @@
  RAW.unshift(COMPLETE_PSYCHOLOGY);
  const EXTRA=[["育成・準備","Training & Preparation"],["12週で育成を進めます。全国40高校から視察先を選び、費用を払って選手を探しましょう。","Train for twelve weeks. Explore forty high schools, pay scouting fees and discover talented athletes."],["育成12週が終了すると解禁","Unlocks after 12 weeks of training"],["大会前に、選手の能力から推定した倍率を見て、部費で順位を予想できます。ゲーム内専用・換金不可。","Before the race, review odds estimated from athlete abilities, and use fictional club funds for optional rank predictions. No real money or redemption."],["視察先を選び、1校あたり","Choose a school. Scouting trip fee: "],["で交通・調査・面談を実施します。年間3校まで。調査後に本人へ入部を打診できます（最大3名、辞退あり）。発掘した候補は次年度の新入生に反映されます。"," for travel, analysis and interviews. Up to three school visits and three recruitment offers per season. Some athletes may decline. Successful recruits arrive next year."],["レース順位予想・投票券","Race Prediction Ticket"],["順位予想ボード","Rank Prediction Board"],["部費で挑戦 / 1年につき1口","Fictional Club Funds · One Ticket Per Season"],["部費を使う額","Club Funds to Use"],["予想する大学","University to Predict"],["戦力","Team Strength"],["推定確率","Estimated Probability"],["倍率","Payout Odds"],["予想順位：","Target Rank: "],["回のレース試算","simulated race scenarios"],["95%試算誤差幅","95% Monte Carlo Sampling Interval"],["実際の的中率は保証されません。","Real-world accuracy is not guaranteed."],["選択オッズ","Selected Odds"],["的中時の合計払戻し","Total Payout if Correct"],["はずれた場合","If Incorrect"],["現実のお金・換金・景品・オンライン賭博は一切ありません。ゲーム内予測イベントです。","Fictional prediction only. No real-money wagering, cashout, prizes or online gambling."],["回のレース試算（晴","race simulations (sunny "],["・雨"," / rainy "],["ゲーム内専用・換金不可","Virtual Only · No Cashout"],["次年度へ進む前に年間収支と大会順位を確認しましょう。","Review the annual accounts and race result before the next season."],["温存・標準・攻めを選び、残存体力とタイム差を確認しましょう。","Choose conserve, steady or push based on remaining energy and gap to rivals."],["5区間の出走選手を確定し、遠征費を確保して大会を開始しましょう。","Select runners for all five legs and reserve enough for travel before starting."],["年間収支","Annual Cashflow"],["監督生活","Manager Career"],["失速リスクは1区間当たりのゲーム上の確率です。","Stage-fright risk is a fictional per-leg probability."],["アスリート","Athletes"]];
  const SCHOOL_NAMES=[["北浜高等学校","Kitahama High School"],["青葉高等学校","Aoba High School"],["栄明高等学校","Eimei High School"],["桜野高等学校","Sakurano High School"],["海東高等学校","Kaito High School"],["西丘高等学校","Nishioka High School"],["若松高等学校","Wakamatsu High School"],["山ノ手高等学校","Yamanote High School"],["翠嶺高等学校","Suirei High School"],["東海高等学校","Tokai High School"],["白鷺高等学校","Shirasagi High School"],["光陵高等学校","Koryo High School"],["玄海高等学校","Genkai High School"],["南翔高等学校","Nansho High School"],["北都高等学校","Hokuto High School"],["成和高等学校","Seiwa High School"],["旭ヶ丘高等学校","Asahigaoka High School"],["中岳高等学校","Nakadake High School"],["清流高等学校","Seiryu High School"],["東雲高等学校","Shinonome High School"],["啓星高等学校","Keisei High School"],["潮見高等学校","Shiomi High School"],["明星高等学校","Meisei High School"],["金嶺高等学校","Kinrei High School"],["富嶽高等学校","Fugaku High School"],["竹原高等学校","Takehara High School"],["松風高等学校","Matsukaze High School"],["陽南高等学校","Yonan High School"],["久遠高等学校","Kuon High School"],["北原高等学校","Kitahara High School"],["彩雲高等学校","Saiun High School"],["瑞穂高等学校","Mizuho High School"],["湘明高等学校","Shomei High School"],["日高高等学校","Hidaka High School"],["常盤高等学校","Tokiwa High School"],["優駿高等学校","Yushun High School"],["蒼山高等学校","Aoyama High School"],["南風高等学校","Minamikaze High School"],["鶴見高等学校","Tsurumi High School"],["朝凪高等学校","Asanagi High School"]];
- RAW.push(...EXTRA,...SCHOOL_NAMES);
+
+ const JOINT_TRANSLATIONS=[
+ ["合同練習｜経験値を配分","Paid Joint Practice — Allocate Experience"],
+ ["参加費を払って合同練習を行う →","Pay and Join a Group Practice →"],
+ ["他チームと走り方を学ぶ有料合同練習です。試合や順位付けはありません。出走予定5名に合計5ポイントを配分（各1ポイント・能力上限99）、疲労は各+5。第1〜11週、同じ週は1回まで、年間2回まで。開催しても週は進みません。","Paid practice with another team, with no practice match or rankings. Allocate 5 total skill points among five runners (1 each, stat cap 99). Fatigue +5 each. Available weeks 1–11, once per week and twice per year. This does not advance the calendar."],
+ ["第1週の練習後に参加できます。","Available after week 1 training."],
+ ["大会前の合同練習は終了しました。","Group practice is closed before the championship."],
+ ["今週は既に参加しています。","Already attended this week."],
+ ["今シーズンの参加上限に達しました。","Seasonal participation limit reached."],
+ ["部費と大会遠征費を確認してください。","Check club funds and race travel reserve."],
+ ["確定すると部費・能力・疲労が同時に更新されます。","Confirming updates funds, skills and fatigue together."],
+ ["基礎育成期（第1〜4週）：全員の能力と疲労を整える","Foundation (weeks 1–4): build skills and manage fatigue"],
+ ["強化・選考期（第5〜8週）：重点能力と出走候補を調整","Selection (weeks 5–8): improve skills and consider lineup"],
+ ["大会準備期（第9〜12週）：疲労管理・5区間編成を優先","Competition preparation (weeks 9–12): recover and plan five legs"],
+ ["大会本番：5区間・15地点で戦術判断","Race day: manage strategy across five legs and fifteen checkpoints"],
+ ["大会直前：区間編成を確定して出走","Pre-race: confirm the lineup"],
+ ["今シーズンの参加：","Sessions this year: "],
+ ["最後の参加週：第","Last attended: Week "],
+ ["疲労 ","Fatigue "],
+ ["参加費 ","Participation cost "]
+ ];
+ RAW.push(...EXTRA,...SCHOOL_NAMES,...JOINT_TRANSLATIONS);
  const entries=RAW.filter(([jp,en])=>jp!==en).sort((a,b)=>b[0].length-a[0].length);
  const dynamic=[
   [/第(\d+)区/g,"Leg $1"],
