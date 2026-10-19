@@ -11,5 +11,5 @@ test("season close and paid joint practice return to training while live racing 
 test("navigation is display only: game roster, cash and local save are not mutated",()=>{
  assert.doesNotMatch(src,/localStorage|sessionStorage|state\.cash\s*=|state\.roster\s*=|\.race\s*=/);
  assert.match(src,/panel\.hidden=!visible/);
- assert.match(src,/data\.raceTab=selected/);
+ assert.match(src,/layout\.dataset\.raceTab=selected/);
 });
