@@ -90,7 +90,7 @@
   if(!game)return;
   const op=game.dataset.action;
   if(["start","next","skip"].includes(op))selected="race";
-  if(op==="train")selected="training";
+  if(op==="train"||op==="joint-practice"||op==="close")selected="training";
  });
  root.addEventListener("keydown",event=>{
   const tab=event.target.closest("[data-ekiden-tab]");if(!tab)return;
