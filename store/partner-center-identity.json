@@ -1,13 +1,27 @@
 {
   "schema": 1,
   "productTitle": "EKIDEN MANAGER",
+  "repository": "shihuiarenjinba-png/game-stadium",
   "storeId": "9NL1HLJRFQ39",
   "identityName": "OkinawaDesktopTools.EKIDENMANAGER",
   "publisher": "CN=46263F21-A700-41DB-8C9B-114C22FB82FC",
   "publisherDisplayName": "Okinawa Desktop Tools",
   "packageFamilyName": "OkinawaDesktopTools.EKIDENMANAGER_j8yefg9jgfh58",
-  "partnerCenterStatus": "In draft",
-  "verificationSource": "Owner-provided Partner Center View product identity screenshot, 2026-10-18",
+  "packageSid": null,
+  "packageSidStatus": "NOT_PROVIDED_IN_AVAILABLE_RECORD; retrieve from Partner Center before a requirement needs it",
+  "partnerCenterStatus": "In draft (last recorded 2026-10-18; current state not rechecked)",
+  "partnerCenterStatusVerifiedAt": "2026-10-18",
+  "storeDeepLink": null,
+  "webStoreUrl": null,
+  "storeLinksNote": "Available after the product is live",
+  "storeListingLanguages": "UNCONFIRMED",
+  "applicationLanguages": "UNCONFIRMED",
+  "formalStoreMsix": {
+    "status": "UNCONFIRMED; NSIS/Portable is not a Store MSIX",
+    "path": null,
+    "sha256": null
+  },
+  "verificationSource": "Owner-provided/reconciled Partner Center product identity details; status retained from record dated 2026-10-18",
   "storeSubmission": "HOLD",
-  "notes": "Product created but not submitted; Store product data is not a signing certificate or a passed WACK."
+  "notes": "Identity values are recorded as identifier tokens without trailing whitespace. Package SID was not present in the available record and is intentionally not guessed. Compare the actual Partner Center values with AppxManifest before packaging."
 }
