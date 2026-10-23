@@ -26,5 +26,7 @@
   "storeSubmission": "HOLD",
   "storePackageVersion": null,
   "storePackageVersionStatus": "HOLD: no previously accepted Store version or owner-approved release version is recorded; do not infer one from package.json.version.",
-  "notes": "Use this JSON as the single source for Store ID and Package Identity fields. Identity values are case-sensitive. Keep packageSid null until obtained from an authorized source; compare the generated MSIX manifest with the recorded identity. Product-slot presence is not evidence of MSIX creation, WACK success, live verification, certification, or publication."
+  "notes": "Use this JSON as the single source for Store ID and Package Identity fields. Identity values are case-sensitive. Keep packageSid null until obtained from an authorized source; compare the generated MSIX manifest with the recorded identity. Product-slot presence is not evidence of MSIX creation, WACK success, live verification, certification, or publication.",
+  "storeDisplayName": "EKIDEN MANAGER",
+  "storeDisplayNameSource": "Owner-provided Partner Center product page screenshot, 2026-10-24"
 }

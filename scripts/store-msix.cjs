@@ -26,22 +26,29 @@ function dimensions(filePath) {
 
 function gate(env, { platform = process.platform, rootDir = root, installedBuilderVersion = null } = {}) {
   const errors = identityIssues(env);
+  const candidateBuild = env.STORE_BUILD_MODE === "CANDIDATE";
   if (platform !== "win32") errors.push("Store MSIX候補はWindowsのビルド環境で生成してください");
-  if (env.STORE_IDENTITY_CONFIRMED !== "YES") {
-    errors.push("STORE_IDENTITY_CONFIRMED=YES（所有者が記録済みIdentity値を確認）が必要です");
+  const identityApproved = env.STORE_IDENTITY_CONFIRMED === "YES" ||
+    (candidateBuild && env.STORE_IDENTITY_CONFIRMED === "OWNER_APPROVED");
+  if (!identityApproved) {
+    errors.push("STORE_IDENTITY_CONFIRMED=YES（正式ビルド）またはCANDIDATE限定のOWNER_APPROVED（記録値を使った未提出候補）が必要です");
   }
-  if (env.STORE_BRAND_APPROVED !== "YES") {
-    errors.push("STORE_BRAND_APPROVED=YES（商用ロゴ・表示の承認）が必要です");
+  if (env.STORE_BRAND_APPROVED !== "YES" && !candidateBuild) {
+    errors.push("STORE_BRAND_APPROVED=YES（正式ビルド前に商用ロゴ・表示の承認）が必要です");
   }
-  if (env.STORE_PREDICTION_CONTENT_REVIEWED !== "YES") {
-    errors.push("STORE_PREDICTION_CONTENT_REVIEWED=YES（順位予想・仮想払戻しの内容とIARC申告方針の確認）が必要です");
+  if (env.STORE_PREDICTION_CONTENT_REVIEWED !== "YES" && !candidateBuild) {
+    errors.push("STORE_PREDICTION_CONTENT_REVIEWED=YES（正式ビルド前に順位予想・仮想払戻しの内容とIARC申告方針の確認）が必要です");
   }
-  if (env.STORE_PACKAGE_VERSION_APPROVED !== "YES") {
-    errors.push("STORE_PACKAGE_VERSION_APPROVED=YES が必要です。既受理版の有無と公開用版番号を確認し、所有者が明示承認するまで正式版番号として採用しません");
+  if (env.STORE_PACKAGE_VERSION_APPROVED !== "YES" && !candidateBuild) {
+    errors.push("STORE_PACKAGE_VERSION_APPROVED=YES が必要です。正式版番号として採用する前に既受理版の有無と公開用版番号を所有者が明示承認してください");
   }
 
   const storeVersionErrors = validateStorePackageVersion(env.STORE_PACKAGE_VERSION);
   errors.push.apply(errors, storeVersionErrors);
+  const sourceCommit = (env.SOURCE_GIT_COMMIT || env.GITHUB_SHA || "").trim();
+  if (!/^[0-9a-f]{40}$/i.test(sourceCommit)) {
+    errors.push("SOURCE_GIT_COMMIT または GITHUB_SHA に40桁のSource commitが必要です");
+  }
 
   let pkg = null;
   try {
@@ -100,6 +107,7 @@ function makeConfig(env) {
     productName: "EKIDEN MANAGER",
     asar: true,
     files: ["index.html", "src/**/*.js", "src/**/*.css", "desktop/main.cjs", "package.json"],
+    extraResources: [{ from: "build/store-build-meta/SOURCE_GIT_COMMIT.txt", to: "SOURCE_GIT_COMMIT.txt" }],
     directories: { output: "dist-msix-store-candidate", buildResources: "build" },
     toolsets: { winCodeSign: "1.1.0" },
     win: { target: [{ target: "msix", arch: ["x64"] }] },
@@ -108,7 +116,7 @@ function makeConfig(env) {
       identityName: record.identityName,
       publisher: record.publisher,
       publisherDisplayName: record.publisherDisplayName,
-      displayName: record.productTitle,
+      displayName: record.storeDisplayName,
       languages: ["ja-JP", "en-US"],
       createMsixupload: true,
       setBuildNumber: false,
@@ -141,6 +149,16 @@ function run() {
     process.exitCode = 2;
     return;
   }
+  const sourceCommit = (process.env.SOURCE_GIT_COMMIT || process.env.GITHUB_SHA || "").trim();
+  const metaDir = path.join(root, "build", "store-build-meta");
+  const commitFile = path.join(metaDir, "SOURCE_GIT_COMMIT.txt");
+  fs.mkdirSync(metaDir, { recursive: true });
+  if (fs.existsSync(commitFile) && fs.readFileSync(commitFile, "utf8").trim() !== sourceCommit) {
+    process.stderr.write("既存SOURCE_GIT_COMMIT.txtが現在のSource commitと不一致です。上書きせず停止します。\n");
+    process.exitCode = 2;
+    return;
+  }
+  fs.writeFileSync(commitFile, sourceCommit + "\n", "utf8");
   fs.writeFileSync(configPath, JSON.stringify(makeConfig(process.env), null, 2) + "\n", { flag: "wx" });
   const cli = path.join(root, "node_modules", "electron-builder", "cli.js");
   const result = spawnSync(process.execPath, [cli, "--win", "msix", "--x64", "--config", configPath, "--publish", "never"],

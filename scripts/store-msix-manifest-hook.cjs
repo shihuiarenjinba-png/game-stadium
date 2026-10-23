@@ -46,6 +46,17 @@ function rewriteManifest(manifestText, version, identityRecord = record) {
     throw new Error("Manifest PublisherDisplayName が store/partner-center-identity.json と一致しません");
   }
 
+  const properties = Array.from(manifestText.matchAll(/<Properties\b[^>]*>([\s\S]*?)<\/Properties>/g));
+  if (properties.length !== 1) throw new Error("Manifest Properties element が1件ではありません");
+  const displayNames = Array.from(properties[0][1].matchAll(/<DisplayName\b[^>]*>([\s\S]*?)<\/DisplayName>/g));
+  if (displayNames.length !== 1 || decodeXml(displayNames[0][1].trim()) !== identityRecord.storeDisplayName) {
+    throw new Error("Package/Properties/DisplayName が予約済みStore名と一致しません");
+  }
+  const visualElements = manifestText.match(/<(?:[A-Za-z0-9_-]+:)?VisualElements\b[^>]*>/g) || [];
+  if (visualElements.length !== 1 || getAttribute(visualElements[0], "DisplayName") !== identityRecord.storeDisplayName) {
+    throw new Error("uap:VisualElements/@DisplayName が予約済みStore名と一致しません");
+  }
+
   const versionAttribute = /\bVersion\s*=\s*(["'])(.*?)\1/g;
   const versionAttributes = Array.from(identityTag.matchAll(versionAttribute));
   if (versionAttributes.length !== 1) throw new Error("Identity.Version attribute が1件ではありません");
