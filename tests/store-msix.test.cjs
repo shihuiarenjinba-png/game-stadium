@@ -14,6 +14,8 @@ const env = {
   STORE_IDENTITY_NAME: record.identityName,
   STORE_PUBLISHER: record.publisher,
   STORE_PUBLISHER_DISPLAY_NAME: record.publisherDisplayName,
+  STORE_DISPLAY_NAME: record.storeDisplayName,
+  SOURCE_GIT_COMMIT: "0123456789abcdef0123456789abcdef01234567",
   STORE_IDENTITY_CONFIRMED: "YES",
   STORE_BRAND_APPROVED: "YES",
   STORE_PREDICTION_CONTENT_REVIEWED: "YES",
@@ -32,7 +34,8 @@ test("MSIX config reads Name, Publisher, and PublisherDisplayName only from the 
   assert.equal(config.msix.identityName, record.identityName);
   assert.equal(config.msix.publisher, record.publisher);
   assert.equal(config.msix.publisherDisplayName, record.publisherDisplayName);
-  assert.equal(config.msix.displayName, record.productTitle);
+  assert.equal(config.msix.displayName, record.storeDisplayName);
+  assert.deepEqual(config.extraResources, [{ from: "build/store-build-meta/SOURCE_GIT_COMMIT.txt", to: "SOURCE_GIT_COMMIT.txt" }]);
   assert.equal(config.appxManifestCreated, "./scripts/store-msix-manifest-hook.cjs");
   assert.equal(Object.prototype.hasOwnProperty.call(config, "buildVersion"), false);
   assert.deepEqual(config.win.target, [{ target: "msix", arch: ["x64"] }]);
@@ -93,8 +96,8 @@ test("preflight preserves OS, builder dependency, source and logo blockers", () 
 test("Manifest hook changes only Identity.Version and checks the three canonical identity values", () => {
   const original = '<?xml version="1.0"?><Package><Identity Name="' + record.identityName +
     '" Publisher="' + record.publisher + '" Version="0.7.0.0" ProcessorArchitecture="x64"/>' +
-    '<Properties><DisplayName>EKIDEN MANAGER</DisplayName><PublisherDisplayName>' +
-    record.publisherDisplayName + '</PublisherDisplayName></Properties></Package>';
+    '<Properties><DisplayName>' + record.storeDisplayName + '</DisplayName><PublisherDisplayName>' +
+    record.publisherDisplayName + '</PublisherDisplayName></Properties><Applications><Application><VisualElements DisplayName="' + record.storeDisplayName + '"/></Application></Applications></Package>';
   const updated = rewriteManifest(original, "1.0.0.0");
   assert.ok(updated.includes('Version="1.0.0.0"'));
   assert.ok(updated.includes('Name="' + record.identityName + '"'));
@@ -104,6 +107,7 @@ test("Manifest hook changes only Identity.Version and checks the three canonical
   assert.throws(() => rewriteManifest(original.replace(record.identityName, "OkinawaDesktopTools.WRONG"), "1.0.0.0"), /Identity\.Name/);
   assert.throws(() => rewriteManifest(original.replace(record.publisher, "CN=Wrong"), "1.0.0.0"), /Identity\.Publisher/);
   assert.throws(() => rewriteManifest(original.replace(record.publisherDisplayName, "Wrong publisher"), "1.0.0.0"), /PublisherDisplayName/);
+  assert.throws(() => rewriteManifest(original.replace("<DisplayName>" + record.storeDisplayName + "</DisplayName>", "<DisplayName>Wrong title</DisplayName>"), "1.0.0.0"), /DisplayName/);
   assert.throws(() => rewriteManifest(original, "0.7.0.0"), /Major/);
 });
 
@@ -141,6 +145,15 @@ test("PowerShell verifier checks Name, Publisher, PublisherDisplayName, Version 
   const content = fs.readFileSync(path.join(__dirname, "../scripts/verify-store-msix.ps1"), "utf8");
   for (const token of [
     "AppxManifest.xml", "identityName", "publisher", "publisherDisplayName",
-    "STORE_PACKAGE_VERSION", "versionParts", "ProcessorArchitecture", "SHA256"
+    "STORE_PACKAGE_VERSION", "ProcessorArchitecture", "SHA256", "SOURCE_GIT_COMMIT", "ja-JP", "en-US"
   ]) assert.ok(content.includes(token), token);
+});
+
+test("PowerShell verifier parses successfully on Windows",()=>{
+ if(process.platform!=="win32")return;
+ const {spawnSync}=require("node:child_process");
+ const file=path.join(__dirname,"../scripts/verify-store-msix.ps1");
+ const command="$tokens=$null;$errors=$null;[System.Management.Automation.Language.Parser]::ParseFile('"+file.replace(/'/g,"''")+"',[ref]$tokens,[ref]$errors)|Out-Null;if($errors.Count){$errors|ForEach-Object{Write-Error $_};exit 1}";
+ const r=spawnSync("powershell.exe",["-NoProfile","-Command",command],{encoding:"utf8"});
+ assert.equal(r.status,0,(r.stderr||r.stdout||"PowerShell parser failed"));
 });

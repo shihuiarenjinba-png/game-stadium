@@ -38,6 +38,8 @@ jobs:
           STORE_IDENTITY_NAME: OkinawaDesktopTools.EKIDENMANAGER
           STORE_PUBLISHER: CN=46263F21-A700-41DB-8C9B-114C22FB82FC
           STORE_PUBLISHER_DISPLAY_NAME: Okinawa Desktop Tools
+          STORE_DISPLAY_NAME: EKIDEN MANAGER
+          SOURCE_GIT_COMMIT: ${{ github.sha }}
           STORE_IDENTITY_CONFIRMED: OWNER_APPROVED
           STORE_BRAND_APPROVED: CANDIDATE_ONLY
           STORE_PREDICTION_CONTENT_REVIEWED: CANDIDATE_ONLY
@@ -68,6 +70,7 @@ jobs:
             identityName = "OkinawaDesktopTools.EKIDENMANAGER"
             publisher = "CN=46263F21-A700-41DB-8C9B-114C22FB82FC"
             publisherDisplayName = "Okinawa Desktop Tools"
+            storeDisplayName = "EKIDEN MANAGER"
             packageSid = $null
             storeVersionApproval = "NOT_GRANTED_CANDIDATE_ONLY"
             brandApproval = "NOT_GRANTED_CANDIDATE_ONLY"

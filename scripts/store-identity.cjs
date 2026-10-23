@@ -11,6 +11,7 @@ function issues(env, { required = true } = {}) {
     ["identityName", record.identityName],
     ["publisher", record.publisher],
     ["publisherDisplayName", record.publisherDisplayName],
+    ["storeDisplayName", record.storeDisplayName],
     ["packageFamilyName", record.packageFamilyName]
   ];
   for (const [key, value] of recordFields) {
@@ -23,7 +24,8 @@ function issues(env, { required = true } = {}) {
     ["STORE_ID", "storeId"],
     ["STORE_IDENTITY_NAME", "identityName"],
     ["STORE_PUBLISHER", "publisher"],
-    ["STORE_PUBLISHER_DISPLAY_NAME", "publisherDisplayName"]
+    ["STORE_PUBLISHER_DISPLAY_NAME", "publisherDisplayName"],
+    ["STORE_DISPLAY_NAME", "storeDisplayName"]
   ];
   for (const [variable, key] of fields) {
     const supplied = env[variable];

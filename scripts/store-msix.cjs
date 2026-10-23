@@ -45,6 +45,10 @@ function gate(env, { platform = process.platform, rootDir = root, installedBuild
 
   const storeVersionErrors = validateStorePackageVersion(env.STORE_PACKAGE_VERSION);
   errors.push.apply(errors, storeVersionErrors);
+  const sourceCommit = (env.SOURCE_GIT_COMMIT || env.GITHUB_SHA || "").trim();
+  if (!/^[0-9a-f]{40}$/i.test(sourceCommit)) {
+    errors.push("SOURCE_GIT_COMMIT または GITHUB_SHA に40桁のSource commitが必要です");
+  }
 
   let pkg = null;
   try {
@@ -103,6 +107,7 @@ function makeConfig(env) {
     productName: "EKIDEN MANAGER",
     asar: true,
     files: ["index.html", "src/**/*.js", "src/**/*.css", "desktop/main.cjs", "package.json"],
+    extraResources: [{ from: "build/store-build-meta/SOURCE_GIT_COMMIT.txt", to: "SOURCE_GIT_COMMIT.txt" }],
     directories: { output: "dist-msix-store-candidate", buildResources: "build" },
     toolsets: { winCodeSign: "1.1.0" },
     win: { target: [{ target: "msix", arch: ["x64"] }] },
@@ -111,7 +116,7 @@ function makeConfig(env) {
       identityName: record.identityName,
       publisher: record.publisher,
       publisherDisplayName: record.publisherDisplayName,
-      displayName: record.productTitle,
+      displayName: record.storeDisplayName,
       languages: ["ja-JP", "en-US"],
       createMsixupload: true,
       setBuildNumber: false,
@@ -144,6 +149,16 @@ function run() {
     process.exitCode = 2;
     return;
   }
+  const sourceCommit = (process.env.SOURCE_GIT_COMMIT || process.env.GITHUB_SHA || "").trim();
+  const metaDir = path.join(root, "build", "store-build-meta");
+  const commitFile = path.join(metaDir, "SOURCE_GIT_COMMIT.txt");
+  fs.mkdirSync(metaDir, { recursive: true });
+  if (fs.existsSync(commitFile) && fs.readFileSync(commitFile, "utf8").trim() !== sourceCommit) {
+    process.stderr.write("既存SOURCE_GIT_COMMIT.txtが現在のSource commitと不一致です。上書きせず停止します。\n");
+    process.exitCode = 2;
+    return;
+  }
+  fs.writeFileSync(commitFile, sourceCommit + "\n", "utf8");
   fs.writeFileSync(configPath, JSON.stringify(makeConfig(process.env), null, 2) + "\n", { flag: "wx" });
   const cli = path.join(root, "node_modules", "electron-builder", "cli.js");
   const result = spawnSync(process.execPath, [cli, "--win", "msix", "--x64", "--config", configPath, "--publish", "never"],
