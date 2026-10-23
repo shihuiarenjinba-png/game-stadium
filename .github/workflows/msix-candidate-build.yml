@@ -1,0 +1,87 @@
+name: EKIDEN MANAGER MSIX internal candidate
+on:
+  push:
+    branches:
+      - ops/msix-candidate-build-20261023
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  store-candidate:
+    runs-on: windows-latest
+    timeout-minutes: 50
+    steps:
+      - name: Checkout candidate source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+
+      - name: Install project dependencies with isolated Store builder override
+        run: npm install --no-save --package-lock=false --no-audit --no-fund --force electron-builder@27.0.0-alpha.10
+
+      - name: Run source and Store package regression tests
+        run: npm test
+
+      - name: Generate candidate Store artwork (not commercially approved)
+        run: node scripts/make-store-candidate-icons.cjs
+
+      - name: Build and verify unsigned internal MSIX candidate
+        run: npm run build:msix
+        env:
+          STORE_BUILD_MODE: CANDIDATE
+          STORE_ID: 9NL1HLJRFQ39
+          STORE_IDENTITY_NAME: OkinawaDesktopTools.EKIDENMANAGER
+          STORE_PUBLISHER: CN=46263F21-A700-41DB-8C9B-114C22FB82FC
+          STORE_PUBLISHER_DISPLAY_NAME: Okinawa Desktop Tools
+          STORE_IDENTITY_CONFIRMED: OWNER_APPROVED
+          STORE_BRAND_APPROVED: CANDIDATE_ONLY
+          STORE_PREDICTION_CONTENT_REVIEWED: CANDIDATE_ONLY
+          STORE_PACKAGE_VERSION_APPROVED: CANDIDATE_ONLY
+          STORE_PACKAGE_VERSION: 1.0.0.0
+
+      - name: Write candidate handoff ledger
+        if: ${{ always() && hashFiles('dist-msix-store-candidate/**') != '' }}
+        shell: pwsh
+        run: |
+          $dir = "dist-msix-store-candidate"
+          $files = @(Get-ChildItem -LiteralPath $dir -File | Where-Object { $_.Extension -in @(".msix", ".msixupload") })
+          $rows = @($files | ForEach-Object {
+            [pscustomobject]@{
+              file = $_.Name
+              bytes = $_.Length
+              sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+            }
+          })
+          $ledger = [ordered]@{
+            artifactKind = "INTERNAL_CANDIDATE_NOT_CERTIFIED_NOT_SUBMITTED"
+            repository = "${{ github.repository }}"
+            sourceBranch = "${{ github.ref_name }}"
+            sourceCommit = "${{ github.sha }}"
+            workflowRunId = "${{ github.run_id }}"
+            candidateOnlyVersion = "1.0.0.0"
+            storeId = "9NL1HLJRFQ39"
+            identityName = "OkinawaDesktopTools.EKIDENMANAGER"
+            publisher = "CN=46263F21-A700-41DB-8C9B-114C22FB82FC"
+            publisherDisplayName = "Okinawa Desktop Tools"
+            packageSid = $null
+            storeVersionApproval = "NOT_GRANTED_CANDIDATE_ONLY"
+            brandApproval = "NOT_GRANTED_CANDIDATE_ONLY"
+            predictionContentReview = "NOT_GRANTED_CANDIDATE_ONLY"
+            files = $rows
+            remainingGates = @("current Partner Center identity/display-name confirmation", "IARC/content review", "brand approval", "approved Store version", "Windows install/run/save/restore test", "WACK/Store validation", "manual submission approval")
+          }
+          $ledger | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $dir "MSIX_CANDIDATE_HANDOFF.json") -Encoding utf8
+
+      - name: Upload MSIX candidate and evidence
+        if: ${{ always() && hashFiles('dist-msix-store-candidate/**') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekiden-manager-msix-internal-candidate-${{ github.run_number }}
+          path: dist-msix-store-candidate/
+          if-no-files-found: error
+          retention-days: 14
