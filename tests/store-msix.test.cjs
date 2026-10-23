@@ -107,6 +107,36 @@ test("Manifest hook changes only Identity.Version and checks the three canonical
   assert.throws(() => rewriteManifest(original, "0.7.0.0"), /Major/);
 });
 
+test("candidate mode permits only an unsigned internal package without claiming commercial approvals", () => {
+  const candidateEnv = { ...env, STORE_BUILD_MODE: "CANDIDATE",
+    STORE_IDENTITY_CONFIRMED: "OWNER_APPROVED",
+    STORE_BRAND_APPROVED: "CANDIDATE_ONLY",
+    STORE_PREDICTION_CONTENT_REVIEWED: "CANDIDATE_ONLY",
+    STORE_PACKAGE_VERSION_APPROVED: "CANDIDATE_ONLY" };
+  assert.deepEqual(gate(candidateEnv, { platform: "win32", installedBuilderVersion: builderVersion }), []);
+  const formal = gate({ ...candidateEnv, STORE_BUILD_MODE: undefined },
+    { platform: "win32", installedBuilderVersion: builderVersion }).join("\n");
+  assert.match(formal, /STORE_IDENTITY_CONFIRMED/);
+  assert.match(formal, /STORE_BRAND_APPROVED/);
+  assert.match(formal, /STORE_PREDICTION_CONTENT_REVIEWED/);
+  assert.match(formal, /STORE_PACKAGE_VERSION_APPROVED/);
+});
+
+test("Store icon candidate script creates required dimensions deterministically without overwriting existing artwork", () => {
+  const icons = require("../scripts/make-store-candidate-icons.cjs");
+  assert.deepEqual(icons.specs, {
+    "StoreLogo.png": [50, 50], "Square44x44Logo.png": [44, 44],
+    "Square150x150Logo.png": [150, 150], "Wide310x150Logo.png": [310, 150]
+  });
+  for (const [name, [w,h]] of Object.entries(icons.specs)) {
+    const png = icons.paint(w,h);
+    assert.equal(png.subarray(0,8).toString("hex"), "89504e470d0a1a0a");
+    assert.equal(png.readUInt32BE(16), w);
+    assert.equal(png.readUInt32BE(20), h);
+    assert.ok(png.equals(icons.paint(w,h)), name + " must be deterministic");
+  }
+});
+
 test("PowerShell verifier checks Name, Publisher, PublisherDisplayName, Version rules, Architecture and SHA256", () => {
   const content = fs.readFileSync(path.join(__dirname, "../scripts/verify-store-msix.ps1"), "utf8");
   for (const token of [
