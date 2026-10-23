@@ -1,40 +1,116 @@
 "use strict";
-const test=require("node:test"),assert=require("node:assert/strict");
-const {gate,makeConfig,builderVersion,record}=require("../scripts/store-msix.cjs");
-const pkg=require("../package.json");
-const {issues}=require("../scripts/store-identity.cjs");
-const env={STORE_IDENTITY_NAME:record.identityName,STORE_PUBLISHER:record.publisher,
- STORE_PUBLISHER_DISPLAY_NAME:record.publisherDisplayName,STORE_ID:record.storeId,
- STORE_IDENTITY_CONFIRMED:"YES",STORE_BRAND_APPROVED:"YES",STORE_PREDICTION_CONTENT_REVIEWED:"YES",STORE_PACKAGE_VERSION:"1.0.0.0"};
-test("Store identity cannot be taken from another game",()=>{
- assert.deepEqual(issues(env),[]);
- assert.ok(issues({...env,STORE_IDENTITY_NAME:"OkinawaDesktopTools.20270FC9B0B9E"}).length);
- assert.ok(issues({...env,STORE_ID:"9NDJG4P8RW5F"}).length);
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const { gate, makeConfig, builderVersion, record } = require("../scripts/store-msix.cjs");
+const { validateStorePackageVersion, validateInternalSemVer } = require("../scripts/store-package-version.cjs");
+const { rewriteManifest } = require("../scripts/store-msix-manifest-hook.cjs");
+const pkg = require("../package.json");
+const { issues } = require("../scripts/store-identity.cjs");
+
+const env = {
+  STORE_ID: record.storeId,
+  STORE_IDENTITY_NAME: record.identityName,
+  STORE_PUBLISHER: record.publisher,
+  STORE_PUBLISHER_DISPLAY_NAME: record.publisherDisplayName,
+  STORE_IDENTITY_CONFIRMED: "YES",
+  STORE_BRAND_APPROVED: "YES",
+  STORE_PREDICTION_CONTENT_REVIEWED: "YES",
+  STORE_PACKAGE_VERSION_APPROVED: "YES",
+  STORE_PACKAGE_VERSION: "1.0.0.0"
+};
+
+test("identity confirmations cannot point at a different Store product", () => {
+  assert.deepEqual(issues(env), []);
+  assert.ok(issues({ ...env, STORE_IDENTITY_NAME: "OkinawaDesktopTools.20270FC9B0B9E" }).length);
+  assert.ok(issues({ ...env, STORE_ID: "9NDJG4P8RW5F" }).length);
 });
-test("MSIX config targets exactly registered EKIDEN identity, not old portable installer",()=>{
- const conf=makeConfig(env);
- assert.equal(conf.msix.identityName,record.identityName);
- assert.equal(conf.msix.publisher,record.publisher);
- assert.equal(conf.msix.createMsixupload,true);
- assert.deepEqual(conf.win.target,[{target:"msix",arch:["x64"]}]);
- assert.deepEqual(conf.msix.capabilities,["runFullTrust"]);
- assert.equal(conf.directories.output,"dist-msix-store-candidate");
- assert.deepEqual(pkg.build.win.target.map(x=>x.target),["nsis","portable"]);
- assert.equal(builderVersion,"27.0.0-alpha.10");
+
+test("MSIX config reads Name, Publisher, and PublisherDisplayName only from the canonical identity JSON", () => {
+  const config = makeConfig(env);
+  assert.equal(config.msix.identityName, record.identityName);
+  assert.equal(config.msix.publisher, record.publisher);
+  assert.equal(config.msix.publisherDisplayName, record.publisherDisplayName);
+  assert.equal(config.msix.displayName, record.productTitle);
+  assert.equal(config.appxManifestCreated, "./scripts/store-msix-manifest-hook.cjs");
+  assert.equal(Object.prototype.hasOwnProperty.call(config, "buildVersion"), false);
+  assert.deepEqual(config.win.target, [{ target: "msix", arch: ["x64"] }]);
+  assert.equal(config.msix.createMsixupload, true);
+  assert.equal(config.directories.output, "dist-msix-store-candidate");
+  assert.deepEqual(pkg.build.win.target.map(x => x.target), ["nsis", "portable"]);
+  assert.equal(pkg.version, "0.7.0");
+  assert.equal(builderVersion, "27.0.0-alpha.10");
 });
-test("preflight retains all safety blockers: release version, builder, identity, brand and Windows",()=>{
- const blocked=gate(env,{platform:"linux",installedBuilderVersion:"26.15.3"}).join("\n");
- assert.match(blocked,/Windows/);
- assert.match(blocked,/不一致/);
- assert.match(blocked,/electron-builder/);
- assert.match(blocked,/承認ロゴ/);
- assert.match(gate({...env,STORE_IDENTITY_NAME:"fake.name"},{platform:"win32",installedBuilderVersion:builderVersion}).join("\n"),/STORE_IDENTITY_NAME/);
- assert.match(gate({...env,STORE_BRAND_APPROVED:"NO"},{platform:"win32",installedBuilderVersion:builderVersion}).join("\n"),/STORE_BRAND_APPROVED/);
- assert.match(gate({...env,STORE_PREDICTION_CONTENT_REVIEWED:"NO"},{platform:"win32",installedBuilderVersion:builderVersion}).join("\n"),/STORE_PREDICTION_CONTENT_REVIEWED/);
+
+test("Store package version accepts canonical 4-part values within the component range", () => {
+  assert.deepEqual(validateStorePackageVersion("1.0.0.0"), []);
+  assert.deepEqual(validateStorePackageVersion("65535.65535.65535.0"), []);
 });
-test("PowerShell verifier checks manifest Name, Publisher, Version and SHA256",()=>{
- const fs=require("node:fs"),path=require("node:path");
- const content=fs.readFileSync(path.join(__dirname,"../scripts/verify-store-msix.ps1"),"utf8");
- for(const token of ["AppxManifest.xml","identityName","publisher","STORE_PACKAGE_VERSION","SHA256"])
- assert.ok(content.includes(token),token);
+
+test("Store package version rejects malformed, zero-Major, overflow, leading-zero and nonzero-Revision values", () => {
+  for (const value of [
+    "", "1.0.0", "1.0.0.0.0", "0.7.0.0", "01.0.0.0",
+    "1.65536.0.0", "1.0.65536.0", "1.0.0.65536", "1.0.0.1",
+    "-1.0.0.0", "1.0.0.x"
+  ]) {
+    assert.ok(validateStorePackageVersion(value).length > 0, "should reject " + value);
+  }
+});
+
+test("internal package.json SemVer remains independent of the Store Identity.Version", () => {
+  assert.equal(pkg.version, "0.7.0");
+  assert.deepEqual(validateInternalSemVer("0.7.0"), []);
+  assert.deepEqual(validateInternalSemVer("1.2.3-rc.1+build.7"), []);
+  assert.ok(validateInternalSemVer("01.2.3").length > 0);
+  assert.ok(validateInternalSemVer("0.7").length > 0);
+  const errors = gate(env, { platform: "win32", installedBuilderVersion: builderVersion });
+  assert.equal(errors.some(error => /package\.json\.version.*一致/.test(error)), false);
+});
+
+test("unapproved or invalid Store package versions fail closed", () => {
+  assert.ok(gate({ ...env, STORE_PACKAGE_VERSION_APPROVED: "NO" },
+    { platform: "win32", installedBuilderVersion: builderVersion }).some(x => x.includes("STORE_PACKAGE_VERSION_APPROVED")));
+  assert.ok(gate({ ...env, STORE_PACKAGE_VERSION: "0.7.0.0" },
+    { platform: "win32", installedBuilderVersion: builderVersion }).some(x => x.includes("Major")));
+  assert.ok(gate({ ...env, STORE_PACKAGE_VERSION: "1.0.0.1" },
+    { platform: "win32", installedBuilderVersion: builderVersion }).some(x => x.includes("Revision")));
+});
+
+test("preflight preserves OS, builder dependency, source and logo blockers", () => {
+  const blocked = gate(env, { platform: "linux", installedBuilderVersion: "26.15.3" }).join("\n");
+  assert.match(blocked, /Windows/);
+  assert.match(blocked, /electron-builder/);
+  assert.match(blocked, /承認ロゴ/);
+  assert.match(gate({ ...env, STORE_IDENTITY_NAME: "fake.name" },
+    { platform: "win32", installedBuilderVersion: builderVersion }).join("\n"), /STORE_IDENTITY_NAME/);
+  assert.match(gate({ ...env, STORE_BRAND_APPROVED: "NO" },
+    { platform: "win32", installedBuilderVersion: builderVersion }).join("\n"), /STORE_BRAND_APPROVED/);
+  assert.match(gate({ ...env, STORE_PREDICTION_CONTENT_REVIEWED: "NO" },
+    { platform: "win32", installedBuilderVersion: builderVersion }).join("\n"), /STORE_PREDICTION_CONTENT_REVIEWED/);
+});
+
+test("Manifest hook changes only Identity.Version and checks the three canonical identity values", () => {
+  const original = '<?xml version="1.0"?><Package><Identity Name="' + record.identityName +
+    '" Publisher="' + record.publisher + '" Version="0.7.0.0" ProcessorArchitecture="x64"/>' +
+    '<Properties><DisplayName>EKIDEN MANAGER</DisplayName><PublisherDisplayName>' +
+    record.publisherDisplayName + '</PublisherDisplayName></Properties></Package>';
+  const updated = rewriteManifest(original, "1.0.0.0");
+  assert.ok(updated.includes('Version="1.0.0.0"'));
+  assert.ok(updated.includes('Name="' + record.identityName + '"'));
+  assert.ok(updated.includes('Publisher="' + record.publisher + '"'));
+  assert.ok(updated.includes("<PublisherDisplayName>" + record.publisherDisplayName + "</PublisherDisplayName>"));
+  assert.equal(updated.replace('Version="1.0.0.0"', 'Version="0.7.0.0"'), original);
+  assert.throws(() => rewriteManifest(original.replace(record.identityName, "OkinawaDesktopTools.WRONG"), "1.0.0.0"), /Identity\.Name/);
+  assert.throws(() => rewriteManifest(original.replace(record.publisher, "CN=Wrong"), "1.0.0.0"), /Identity\.Publisher/);
+  assert.throws(() => rewriteManifest(original.replace(record.publisherDisplayName, "Wrong publisher"), "1.0.0.0"), /PublisherDisplayName/);
+  assert.throws(() => rewriteManifest(original, "0.7.0.0"), /Major/);
+});
+
+test("PowerShell verifier checks Name, Publisher, PublisherDisplayName, Version rules, Architecture and SHA256", () => {
+  const content = fs.readFileSync(path.join(__dirname, "../scripts/verify-store-msix.ps1"), "utf8");
+  for (const token of [
+    "AppxManifest.xml", "identityName", "publisher", "publisherDisplayName",
+    "STORE_PACKAGE_VERSION", "versionParts", "ProcessorArchitecture", "SHA256"
+  ]) assert.ok(content.includes(token), token);
 });

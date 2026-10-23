@@ -1,7 +1,7 @@
 name: Game simulation tests
 on:
   push:
-    branches: [main, feature/ekiden-manager-mvp, feature/paid-joint-practice-20261019]
+    branches: [main, feature/ekiden-manager-mvp, feature/paid-joint-practice-20261019, feature/race-to-training-flow-20261019]
   pull_request:
 permissions:
   contents: read

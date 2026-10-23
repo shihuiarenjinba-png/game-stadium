@@ -8,8 +8,9 @@
   "publisherDisplayName": "Okinawa Desktop Tools",
   "packageFamilyName": "OkinawaDesktopTools.EKIDENMANAGER_j8yefg9jgfh58",
   "packageSid": null,
-  "packageSidStatus": "NOT_PROVIDED_IN_AVAILABLE_RECORD; retrieve from Partner Center before a requirement needs it",
-  "partnerCenterStatus": "In draft (last recorded 2026-10-18; current state not rechecked)",
+  "packageSidStatus": "HOLD: not present in available record; do not guess. This field is not written into AppxManifest.",
+  "partnerCenterStatus": "In draft",
+  "partnerCenterStatusCurrent": false,
   "partnerCenterStatusVerifiedAt": "2026-10-18",
   "storeDeepLink": null,
   "webStoreUrl": null,
@@ -17,11 +18,13 @@
   "storeListingLanguages": "UNCONFIRMED",
   "applicationLanguages": "UNCONFIRMED",
   "formalStoreMsix": {
-    "status": "UNCONFIRMED; NSIS/Portable is not a Store MSIX",
+    "status": "UNCONFIRMED; current NSIS/Portable targets are not a Store MSIX",
     "path": null,
     "sha256": null
   },
-  "verificationSource": "Owner-provided/reconciled Partner Center product identity details; status retained from record dated 2026-10-18",
+  "verificationSource": "Historical owner-provided Partner Center identity record dated 2026-10-18. No live Partner Center check was performed for the 2026-10-23 version-gate task.",
   "storeSubmission": "HOLD",
-  "notes": "Identity values are recorded as identifier tokens without trailing whitespace. Package SID was not present in the available record and is intentionally not guessed. Compare the actual Partner Center values with AppxManifest before packaging."
+  "storePackageVersion": null,
+  "storePackageVersionStatus": "HOLD: no previously accepted Store version or owner-approved release version is recorded; do not infer one from package.json.version.",
+  "notes": "Use this JSON as the single source for Store ID and Package Identity fields. Identity values are case-sensitive. Keep packageSid null until obtained from an authorized source; compare the generated MSIX manifest with the recorded identity. Product-slot presence is not evidence of MSIX creation, WACK success, live verification, certification, or publication."
 }
