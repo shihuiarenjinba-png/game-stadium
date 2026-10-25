@@ -1,0 +1,41 @@
+name: Unified 1024/1280 UI and source gate
+on:
+  push:
+    branches:
+      - work/unified-qa-20261025
+    paths:
+      - 'scripts/unified-ui-qa*'
+      - '.github/workflows/unified-ui-gate.yml'
+      - 'index.html'
+      - 'src/**'
+      - 'tests/**'
+      - 'story.js'
+      - 'game*.js'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-and-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate complete game regression
+        run: npm test
+      - name: Install temporary browser QA dependency
+        run: npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.56.1
+      - name: Install Chromium for UI testing
+        run: npx playwright install --with-deps chromium
+      - name: Real UI rendering, tabs, 1024/1280, offline and error checks
+        run: node scripts/unified-ui-qa.cjs
+      - name: Upload dated visual evidence and gate record
+        if: ${{ always() && hashFiles('unified-ui-evidence/**') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: unified-ui-gate-${{ github.sha }}
+          path: unified-ui-evidence/
+          retention-days: 14
+          if-no-files-found: error
