@@ -24,7 +24,7 @@ const output=path.resolve("unified-ui-evidence");fs.mkdirSync(output,{recursive:
     const all=[...document.querySelectorAll('[role="tab"]')].filter(el=>el.getClientRects().length>0);
     const selected=all.filter(el=>el.getAttribute("aria-selected")==="true");
     if(selected.length!==1)return {error:"Expected exactly one active tab",selected:selected.length};
-    const controls=(selected[0].getAttribute("aria-controls")||"").split(/\\s+/).filter(Boolean);
+    const controls=(selected[0].getAttribute("aria-controls")||"").split(/\s+/).filter(Boolean);
     if(!controls.length)return {error:"Selected tab has no associated panel"};
     const visibility=controls.map(id=>{
       const element=document.getElementById(id);
