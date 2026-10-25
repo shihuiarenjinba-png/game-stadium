@@ -23,7 +23,8 @@ try {
   }
   & npm.cmd test
   if ($LASTEXITCODE -ne 0) { throw 'Source regression tests FAILED.' }
-  if ((Get-Content package.json -Raw | ConvertFrom-Json).scripts.'audit:integrity') {
+  $scripts = (Get-Content package.json -Raw | ConvertFrom-Json).scripts
+  if ($scripts.PSObject.Properties.Name -contains 'audit:integrity') {
     & npm.cmd run audit:integrity
     if ($LASTEXITCODE -ne 0) { throw 'Original source SHA-256 manifest FAILED. Do not rewrite the ledger.' }
   }
