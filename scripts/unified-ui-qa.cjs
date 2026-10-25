@@ -13,10 +13,17 @@ const output=path.resolve("unified-ui-evidence");fs.mkdirSync(output,{recursive:
   await p.screenshot({path:path.join(output,"01-desktop-1280x720.png"),fullPage:true});
   const tab=p.locator('[role="tab"]:visible');
   const count=await tab.count(),observed={visibleTabs:count,clickedTab:false};
+  assert.equal(count,config.expectedTabs,"Unexpected game-tab count; verify the UI really initialized");
+  if(config.landingCards)assert.equal(await p.locator(".board").count(),config.landingCards,"Landing content changed");
+
   if(count>=2){
    const second=tab.nth(1);await second.click();
    const a=await second.getAttribute("aria-selected");
    if(a!==null)assert.equal(a,"true","click must activate selected UI tab");
+   if(config.panelSelector){
+    const visible=await p.locator(config.panelSelector).evaluateAll(nodes=>nodes.filter(el=>el.getClientRects().length>0).length);
+    assert.ok(visible>=1,"Tab switch left the player without a visible game panel");
+   }
    observed.clickedTab=true;
    await p.screenshot({path:path.join(output,"02-second-tab-1280x720.png"),fullPage:true});
   }
