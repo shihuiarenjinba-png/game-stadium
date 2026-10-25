@@ -1,5 +1,7 @@
 {
   "product": "EKIDEN MANAGER",
   "entranceSelector": null,
-  "devCopyHold": false
+  "devCopyHold": false,
+  "expectedTabs": 5,
+  "panelSelector": "[data-ekiden-screen]"
 }
