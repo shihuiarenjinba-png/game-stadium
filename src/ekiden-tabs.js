@@ -57,10 +57,22 @@
    nav.setAttribute("role","tablist");nav.setAttribute("aria-label","監督メニュー");
    for(const [key,label] of PAGES){
     const button=document.createElement("button");button.type="button";button.dataset.ekidenTab=key;
-    button.textContent=label;button.setAttribute("role","tab");nav.append(button);
+    button.textContent=label;button.id="ekiden-tab-"+key;button.setAttribute("role","tab");nav.append(button);
    }
    const guide=wrap.querySelector(".coach-orientation");if(guide)guide.after(nav);
    else wrap.querySelector("header.top").after(nav);
+  }
+  const assigned={};
+  for(const [i,panel] of panels.entries()){
+   const kind=panel.dataset.ekidenScreen;
+   if(!panel.id)panel.id="ekiden-panel-"+kind+"-"+i;
+   panel.setAttribute("role","tabpanel");
+   panel.setAttribute("aria-labelledby","ekiden-tab-"+kind);
+   (assigned[kind]??=[]).push(panel.id);
+  }
+  for(const button of nav.querySelectorAll("[data-ekiden-tab]")){
+   if(!button.id)button.id="ekiden-tab-"+button.dataset.ekidenTab;
+   button.setAttribute("aria-controls",(assigned[button.dataset.ekidenTab]||[]).join(" "));
   }
   for(const panel of panels){
    const visible=panel.dataset.ekidenScreen===selected;
@@ -94,11 +106,11 @@
  });
  root.addEventListener("keydown",event=>{
   const tab=event.target.closest("[data-ekiden-tab]");if(!tab)return;
-  if(!["ArrowLeft","ArrowRight","Home","End"].includes(event.key))return;
+  if(!["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Home","End"].includes(event.key))return;
   event.preventDefault();
   const index=PAGES.findIndex(([key])=>key===selected);
   const next=event.key==="Home"?0:event.key==="End"?PAGES.length-1:
-   (index+(event.key==="ArrowLeft"?-1:1)+PAGES.length)%PAGES.length;
+   (index+(event.key==="ArrowLeft"||event.key==="ArrowUp"?-1:1)+PAGES.length)%PAGES.length;
   choose(PAGES[next][0]);
   root.querySelector('[data-ekiden-tab="'+selected+'"]')?.focus();
  });
