@@ -10,7 +10,7 @@ const output=path.resolve("unified-ui-evidence");fs.mkdirSync(output,{recursive:
   listen(p);await p.goto(url.pathToFileURL(path.resolve("index.html")).href,{waitUntil:"load"});
   const title=await p.title();assert.ok(title.length>4,"missing game window title");
   const text=await p.locator("body").innerText();assert.ok(text.length>60,"game content not painted");
-  await p.screenshot({path:path.join(output,"01-desktop-1280x720.png"),fullPage:true});
+  await p.screenshot({path:path.join(output,"01-desktop-1280x720.png"),fullPage:false});
   const tab=p.locator('[role="tab"]:visible');
   const count=await tab.count(),observed={visibleTabs:count,clickedTab:false};
   assert.equal(count,config.expectedTabs,"Unexpected game-tab count; verify the UI really initialized");
@@ -25,13 +25,13 @@ const output=path.resolve("unified-ui-evidence");fs.mkdirSync(output,{recursive:
     assert.ok(visible>=1,"Tab switch left the player without a visible game panel");
    }
    observed.clickedTab=true;
-   await p.screenshot({path:path.join(output,"02-second-tab-1280x720.png"),fullPage:true});
+   await p.screenshot({path:path.join(output,"02-second-tab-1280x720.png"),fullPage:false});
   }
   const mobile=await browser.newContext({viewport:{width:1024,height:768}}),q=await mobile.newPage();
   listen(q);await q.goto(url.pathToFileURL(path.resolve("index.html")).href,{waitUntil:"load"});
   const metrics=await q.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,viewport:innerWidth}));
   assert.ok(metrics.scrollWidth<=metrics.viewport+2,"horizontal overflow at 1024px: "+JSON.stringify(metrics));
-  await q.screenshot({path:path.join(output,"03-compact-1024x768.png"),fullPage:true});
+  await q.screenshot({path:path.join(output,"03-compact-1024x768.png"),fullPage:false});
   const copy=(await q.locator("body").innerText());
   const forbidden=["MSIX","QA_UNSIGNED","Store Identity","GitHub Actions","WACK","開発工程"];
   assert.equal(forbidden.some(s=>copy.includes(s)),false,"internal engineering terms shown on player screen");
@@ -40,12 +40,21 @@ const output=path.resolve("unified-ui-evidence");fs.mkdirSync(output,{recursive:
   if(config.entranceSelector){
    await q.locator(config.entranceSelector).click();
    assert.notEqual(q.url(),url.pathToFileURL(path.resolve("index.html")).href,"entrance should navigate into game");
-   await q.screenshot({path:path.join(output,"04-entered-game-1024x768.png"),fullPage:true});
+   await q.screenshot({path:path.join(output,"04-entered-game-1024x768.png"),fullPage:false});
+  }
+  const images=fs.readdirSync(output).filter(name=>name.endsWith(".png"));
+  assert.ok(images.length>=2,"UI screenshots must exist");
+  for(const name of images){
+   const bytes=fs.readFileSync(path.join(output,name));
+   assert.equal(bytes.subarray(0,8).toString("hex"),"89504e470d0a1a0a","Invalid PNG "+name);
+   const width=bytes.readUInt32BE(16),height=bytes.readUInt32BE(20);
+   const expected=name.includes("1024x768")? [1024,768] : [1280,720];
+   assert.deepEqual([width,height],expected,"Incorrect pixel dimensions "+name);
   }
   assert.deepEqual(errors,[],"browser runtime error");
   assert.deepEqual(network,[],"game should run without network dependency");
   const qa={status:"PASS",product:config.product,head:"See actions run SHA",title,views:["1280x720","1024x768"],tabs:observed,
-   horizontalOverflow:false,privateRunnerPending:false,devCopyHold:config.devCopyHold,screenshots:config.entranceSelector?4:count>=2?3:2,
+   horizontalOverflow:false,privateRunnerPending:false,devCopyHold:config.devCopyHold,screenshots:images.length,
    errors,externalRequests:network,scope:"Chromium UI rendering/one nav action; not a packaged MSIX install test"};
   fs.writeFileSync(path.join(output,"QA_RESULT.json"),JSON.stringify(qa,null,2)+"\n");
   console.log("UNIFIED_BROWSER_QA_PASS "+JSON.stringify(qa));
