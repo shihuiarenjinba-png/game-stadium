@@ -68,8 +68,8 @@ const output=path.resolve("unified-ui-evidence");fs.mkdirSync(output,{recursive:
   }
   assert.deepEqual(errors,[],"browser runtime error");
   assert.deepEqual(network,[],"game should run without network dependency");
-  const qa={status:"PASS",product:config.product,head:"See actions run SHA",title,views:["1280x720","1024x768"],tabs:observed,
-   horizontalOverflow:false,privateRunnerPending:false,devCopyHold:config.devCopyHold,screenshots:images.length,
+  const qa={status:"PASS",product:config.product,sourceCommit:process.env.GITHUB_SHA||"LOCAL_SHA_IN_SEPARATE_HANDOFF",title,views:["1280x720","1024x768"],tabs:observed,
+   horizontalOverflow:false,executionContext:process.env.GITHUB_ACTIONS==="true"?"github-actions":"local",runnerAvailability:"not assessed by browser test",devCopyHold:config.devCopyHold,screenshots:images.length,
    errors,externalRequests:network,scope:"Chromium UI rendering/one nav action; not a packaged MSIX install test"};
   fs.writeFileSync(path.join(output,"QA_RESULT.json"),JSON.stringify(qa,null,2)+"\n");
   console.log("UNIFIED_BROWSER_QA_PASS "+JSON.stringify(qa));
