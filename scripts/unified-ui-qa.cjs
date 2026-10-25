@@ -20,6 +20,21 @@ const output=path.resolve("unified-ui-evidence");fs.mkdirSync(output,{recursive:
    const second=tab.nth(1);await second.click();
    const a=await second.getAttribute("aria-selected");
    if(a!==null)assert.equal(a,"true","click must activate selected UI tab");
+   const panelCheck=await p.evaluate(()=>{
+    const all=[...document.querySelectorAll('[role="tab"]')].filter(el=>el.getClientRects().length>0);
+    const selected=all.filter(el=>el.getAttribute("aria-selected")==="true");
+    if(selected.length!==1)return {error:"Expected exactly one active tab",selected:selected.length};
+    const controls=(selected[0].getAttribute("aria-controls")||"").split(/\\s+/).filter(Boolean);
+    if(!controls.length)return {error:"Selected tab has no associated panel"};
+    const visibility=controls.map(id=>{
+      const element=document.getElementById(id);
+      return {id,exists:!!element,visible:!!element&&element.getClientRects().length>0&&!element.hidden};
+    });
+    return {selected:selected[0].textContent.trim(),visibility};
+   });
+   assert.equal(panelCheck.error,undefined,JSON.stringify(panelCheck));
+   assert.equal(panelCheck.visibility.every(el=>el.exists&&el.visible),true,
+     "Selected tab must display its own actual panels: "+JSON.stringify(panelCheck));
    if(config.panelSelector){
     const visible=await p.locator(config.panelSelector).evaluateAll(nodes=>nodes.filter(el=>el.getClientRects().length>0).length);
     assert.ok(visible>=1,"Tab switch left the player without a visible game panel");
