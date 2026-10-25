@@ -51,6 +51,20 @@ const output=path.resolve("unified-ui-evidence");fs.mkdirSync(output,{recursive:
   }
   observed.clickedTab=count>=2;
   observed.checkedAllTabs=verifiedTabs===count;
+
+  // Real one-week training decision must update the save and survive restart.
+  await p.locator('[data-ekiden-tab="training"]').click();
+  const key="ekiden-manager-v1";
+  const beforeWeek=await p.evaluate(k=>JSON.parse(localStorage.getItem(k)),key);
+  assert.ok(beforeWeek && Number.isInteger(beforeWeek.week),"missing saved coach progress");
+  await p.locator('[data-action="train"]:visible').first().click();
+  const afterWeek=await p.evaluate(k=>JSON.parse(localStorage.getItem(k)),key);
+  assert.equal(afterWeek.week,beforeWeek.week+1,"training must advance exactly one week");
+  assert.equal(afterWeek.year,beforeWeek.year,"training should not skip to another year");
+  assert.ok(afterWeek.ledger?.length>=beforeWeek.ledger?.length,"training must preserve finance ledger");
+  await p.reload({waitUntil:"load"});
+  const recovered=await p.evaluate(k=>JSON.parse(localStorage.getItem(k)),key);
+  assert.deepEqual(recovered,afterWeek,"training and roster must survive reload");
   const mobile=await browser.newContext({viewport:{width:1024,height:768}}),q=await mobile.newPage();
   listen(q);await q.goto(url.pathToFileURL(path.resolve("index.html")).href,{waitUntil:"load"});
   const metrics=await q.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,viewport:innerWidth}));
