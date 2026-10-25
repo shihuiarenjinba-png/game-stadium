@@ -14,6 +14,11 @@ test("tab rendering does not write to game state or save storage",()=>{
  assert.doesNotMatch(tabs,/localStorage|\.cash\s*=|\.roster\s*=|\.race\s*=/);
  assert.match(tabs,/MutationObserver\(sync\)/);
  assert.match(tabs,/aria-selected/);
+ assert.match(tabs,/setAttribute\("role","tabpanel"\)/);
+ assert.match(tabs,/setAttribute\("aria-labelledby","ekiden-tab-"/);
+ assert.match(tabs,/setAttribute\("aria-controls"/);
+ assert.match(tabs,/ArrowUp/);
+ assert.match(tabs,/ArrowDown/);
  assert.doesNotThrow(()=>new vm.Script(tabs));
  assert.doesNotThrow(()=>new vm.Script(ui));
 });
