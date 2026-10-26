@@ -128,3 +128,24 @@ test("bilingual translation dictionary covers key athletics and championship ter
  assert.equal(t.translateText("第3区","en"),"Leg 3");
  assert.equal(t.translateText("全国高校スカウト","ja"),"全国高校スカウト");
 });
+
+test("English mode covers the core training, race, rival and accounting flow",()=>{
+ const context=vm.createContext({});
+ vm.runInContext(fs.readFileSync(path.join(__dirname,"../src/i18n.js"),"utf8"),context);
+ const t=context.EkidenI18n;
+ const coreCopy=[
+  "ゲームの流れを確認する",
+  "部費・補強・他校分析・過去の結果（詳細）",
+  "大会開始。ペース指示後に走者の体力が表示されます。",
+  "競馬中継をイメージした模式図です。正確なタイム差は下の順位表で確認してください。",
+  "年度決算・資金繰り",
+  "大学配分・卒業生支援は架空のモデル額です。寄付は賞金ではなく活動支援として計上。赤字取引は禁止し、残高は年度をまたいで繰り越します。",
+  "王者・北稜大学にも選手名簿と世代交代があります。順位は固定されず、その年の戦力と走りで決まります。",
+  "年度決算を確定して次年度へ →"
+ ];
+ for(const copy of coreCopy){
+  const translated=t.translateText(copy,"en");
+  assert.doesNotMatch(translated,/[\u3040-\u30ff\u3400-\u9fff々〆〤]/,copy+" => "+translated);
+ }
+ assert.equal(t.translateText("第3週 / 2年目 / 5位 / 4名 / 3件 / 1杯","en"),"Week 3 / Season 2 / Rank 5 / 4 athletes / 3 entries / 1 servings");
+});
