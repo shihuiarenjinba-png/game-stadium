@@ -122,7 +122,16 @@ test("candidate mode permits only an unsigned internal package without claiming 
     STORE_BRAND_APPROVED: "CANDIDATE_ONLY",
     STORE_PREDICTION_CONTENT_REVIEWED: "CANDIDATE_ONLY",
     STORE_PACKAGE_VERSION_APPROVED: "CANDIDATE_ONLY" };
-  assert.deepEqual(gate(candidateEnv, { platform: "win32", installedBuilderVersion: builderVersion }), []);
+  const candidateIssues=gate(candidateEnv,{platform:"win32",installedBuilderVersion:builderVersion});
+  const artIsReady=["StoreLogo.png","Square44x44Logo.png","Square150x150Logo.png","Wide310x150Logo.png"]
+    .every(file=>fs.existsSync(path.join(__dirname,"..","build","appx",file)));
+  // On source-only Linux runners the review artwork has not yet been generated;
+  // that must remain a real packaging blocker, not a test failure.
+  if(artIsReady)assert.deepEqual(candidateIssues,[]);
+  else{
+    assert.ok(candidateIssues.length>=4);
+    assert.ok(candidateIssues.every(x=>/承認ロゴが未配置/.test(x)),candidateIssues.join("\n"));
+  }
   const formal = gate({ ...candidateEnv, STORE_BUILD_MODE: undefined },
     { platform: "win32", installedBuilderVersion: builderVersion }).join("\n");
   assert.match(formal, /STORE_IDENTITY_CONFIRMED/);
