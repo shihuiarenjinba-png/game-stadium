@@ -84,7 +84,12 @@ test("preflight preserves OS, builder dependency, source and logo blockers", () 
   const blocked = gate(env, { platform: "linux", installedBuilderVersion: "26.15.3" }).join("\n");
   assert.match(blocked, /Windows/);
   assert.match(blocked, /electron-builder/);
-  assert.match(blocked, /承認ロゴ/);
+  // Review-only logos are generated before npm test in the Windows candidate CI.
+  // Missing artwork must still fail closed on fresh unprepared checkouts.
+  const prepared = ["StoreLogo.png","Square44x44Logo.png","Square150x150Logo.png","Wide310x150Logo.png"]
+    .every(file => fs.existsSync(path.join(__dirname,"..","build","appx",file)));
+  if(prepared) assert.doesNotMatch(blocked,/承認ロゴが未配置/);
+  else assert.match(blocked,/承認ロゴが未配置/);
   assert.match(gate({ ...env, STORE_IDENTITY_NAME: "fake.name" },
     { platform: "win32", installedBuilderVersion: builderVersion }).join("\n"), /STORE_IDENTITY_NAME/);
   assert.match(gate({ ...env, STORE_BRAND_APPROVED: "NO" },
