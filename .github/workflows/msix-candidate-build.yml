@@ -25,11 +25,11 @@ jobs:
       - name: Install project dependencies with isolated Store builder override
         run: npm install --no-save --package-lock=false --no-audit --no-fund --force electron-builder@27.0.0-alpha.10
 
-      - name: Run source and Store package regression tests
-        run: npm test
-
       - name: Generate candidate Store artwork (not commercially approved)
         run: node scripts/make-store-candidate-icons.cjs
+
+      - name: Run source and Store package regression tests
+        run: npm test
 
       - name: Build and verify unsigned internal MSIX candidate
         run: npm run build:msix
