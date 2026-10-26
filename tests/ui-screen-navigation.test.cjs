@@ -8,7 +8,7 @@ test("race tabs are wired after original game and reuse existing controls",()=>{
   assert.match(tabs,new RegExp('\\["'+name+'","'));
  assert.match(ui,/data-ekiden-screen/);
  for(const action of ["start","next","skip","train"])
-  assert.match(ui,new RegExp('data-action=\\\\\\"'+action));
+  assert.ok(ui.includes('data-action="'+action)||ui.includes("data-action='"+action),"missing action "+action);
 });
 test("tab rendering does not write to game state or save storage",()=>{
  assert.doesNotMatch(tabs,/localStorage|\.cash\s*=|\.roster\s*=|\.race\s*=/);
