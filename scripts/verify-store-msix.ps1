@@ -1,5 +1,12 @@
 param()
 $ErrorActionPreference = "Stop"
+function Get-VerifiedSha256 {
+ param([Parameter(Mandatory=$true)][string]$Path)
+ $stream=[System.IO.File]::OpenRead($Path)
+ $sha=[System.Security.Cryptography.SHA256]::Create()
+ try { return ([System.BitConverter]::ToString($sha.ComputeHash($stream))).Replace("-","") }
+ finally { $stream.Dispose();$sha.Dispose() }
+}
 $root = Split-Path -Parent $PSScriptRoot
 $record = Get-Content -LiteralPath (Join-Path $root "store/partner-center-identity.json") -Raw -Encoding UTF8 | ConvertFrom-Json
 $dir = Join-Path $root "dist-msix-store-candidate"
@@ -58,8 +65,8 @@ try {
   Write-Host "STORE_DISPLAY_NAME_PASS $($record.storeDisplayName)"
   Write-Host "RESOURCE_LANGUAGE_PASS ja-JP,en-US"
   Write-Host "SOURCE_COMMIT_PASS $embeddedCommit"
-  Write-Host ("MSIX_SHA256=" + (Get-FileHash -LiteralPath $packages[0].FullName -Algorithm SHA256).Hash)
-  Write-Host ("MSIXUPLOAD_SHA256=" + (Get-FileHash -LiteralPath $uploads[0].FullName -Algorithm SHA256).Hash)
+  Write-Host ("MSIX_SHA256=" + (Get-VerifiedSha256 -Path $packages[0].FullName))
+  Write-Host ("MSIXUPLOAD_SHA256=" + (Get-VerifiedSha256 -Path $uploads[0].FullName))
   Write-Host "Candidate only: Windows install/save/restore, WACK, Partner Center validation, certification and publication remain separate gates."
 }
 finally { $archive.Dispose() }
