@@ -16,7 +16,7 @@
   const seed=()=>{const n=new Uint32Array(1);if(globalThis.crypto?.getRandomValues){globalThis.crypto.getRandomValues(n);return n[0]||1;}return (Date.now()>>>0)||1;};
   let recoveryBlocked=false, corruptRaw=null;
   let state=load(), flash="",marketTeam="北稜大学",marketRank=1,marketStake=50000;
-  function load(){let raw=null;try{raw=localStorage.getItem(KEY);if(raw){const s=E.migrateSave(JSON.parse(raw));return s;}}catch(e){recoveryBlocked=true;corruptRaw=raw;console.warn("セーブデータの読み込みに失敗:",e.message)}return E.newGame(seed())}
+  function load(){let raw=null;try{raw=localStorage.getItem(KEY);if(raw){const s=E.migrateSave(JSON.parse(raw));return s;}}catch(e){recoveryBlocked=true;corruptRaw=raw;console.warn("セーブデータの読み込みに失敗:",e.message)}return E.migrateSave(E.newGame(seed()))}
   function persist(){
     if(recoveryBlocked)return false;
     try{localStorage.setItem(KEY,JSON.stringify(state));return true;}
@@ -320,7 +320,7 @@
     if(action==="reset"){
       if(confirm(recoveryBlocked?"読込できない元のセーブを新規ゲームで置き換えます。先に退避ファイルを保存しましたか？":"今の進行状況を消し、初年度から始めますか？ セーブ書き出しを推奨します。")){
         try{
-          const next=E.newGame(seed());
+          const next=E.migrateSave(E.newGame(seed()));
           localStorage.setItem(KEY,JSON.stringify(next));
           state=next;recoveryBlocked=false;corruptRaw=null;flash="新しいシーズンを開始しました。";
         }catch(e){flash="保存に失敗したため、元のセーブを残しています。空き容量を確認してください。";}
